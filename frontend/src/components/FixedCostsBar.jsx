@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { formatRupiah, formatNumberInput, parseNumber } from "../lib/format";
-import { api } from "../lib/api";
+import { formatRupiah, formatNumberInput, parseNumber, todayISO } from "../lib/format";
+import { api, JENIS_PENGELUARAN } from "../lib/api";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription,
 } from "./ui/dialog";
 import { toast } from "sonner";
-import { Settings2, Plus, Trash2 } from "lucide-react";
+import { Settings2, Plus, Trash2, ReceiptText } from "lucide-react";
 
 export const FixedCostsBar = ({ fixedCosts, onReload }) => {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [deletedIds, setDeletedIds] = useState([]);
+  const [postOpen, setPostOpen] = useState(false);
+  const [postDate, setPostDate] = useState(todayISO());
+  const [selected, setSelected] = useState({});
 
   useEffect(() => {
     if (open) {
@@ -22,6 +27,38 @@ export const FixedCostsBar = ({ fixedCosts, onReload }) => {
   }, [open, fixedCosts]);
 
   const total = fixedCosts.reduce((a, c) => a + c.nominal, 0);
+
+  useEffect(() => {
+    if (postOpen) {
+      const init = {};
+      fixedCosts.forEach((c) => (init[c.id] = true));
+      setSelected(init);
+      setPostDate(todayISO());
+    }
+  }, [postOpen, fixedCosts]);
+
+  const jenisFor = (nama) => (JENIS_PENGELUARAN.includes(nama) ? nama : "Lain-lain");
+  const selectedList = fixedCosts.filter((c) => selected[c.id]);
+  const postTotal = selectedList.reduce((a, c) => a + c.nominal, 0);
+
+  const postToKas = async () => {
+    if (selectedList.length === 0) return;
+    await Promise.all(
+      selectedList.map((c) =>
+        api.createTransaction({
+          tanggal: postDate,
+          keterangan: c.nama,
+          kategori: "Pengeluaran",
+          jenis: jenisFor(c.nama),
+          nominal: c.nominal,
+          keterangan_tambahan: "Biaya tetap bulanan",
+        })
+      )
+    );
+    toast.success(`${selectedList.length} biaya tetap dicatat ke Buku Kas`);
+    setPostOpen(false);
+    onReload();
+  };
 
   const addRow = () =>
     setRows((r) => [...r, { id: `new-${Date.now()}-${r.length}`, nama: "", nominalStr: "", isNew: true }]);
@@ -60,9 +97,51 @@ export const FixedCostsBar = ({ fixedCosts, onReload }) => {
       ))}
       <span className="font-semibold text-indigo-600" data-testid="fixed-costs-total">Total {formatRupiah(total)}</span>
 
+      <Dialog open={postOpen} onOpenChange={setPostOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" className="ml-auto h-7 gap-1 bg-emerald-600 px-2 hover:bg-emerald-700" data-testid="post-fixed-costs-btn">
+            <ReceiptText size={14} /> Catat ke Kas
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md" data-testid="post-fixed-costs-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Catat Biaya Tetap ke Buku Kas</DialogTitle>
+            <DialogDescription>Otomatis membuat transaksi Pengeluaran — nominal &amp; keterangan sudah terisi.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>Tanggal Pencatatan</Label>
+              <Input type="date" value={postDate} onChange={(e) => setPostDate(e.target.value)} data-testid="post-date-input" />
+            </div>
+            <div className="max-h-60 space-y-1.5 overflow-y-auto">
+              {fixedCosts.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50" data-testid={`post-item-${c.id}`}>
+                  <span className="flex items-center gap-2">
+                    <Checkbox checked={!!selected[c.id]} onCheckedChange={(v) => setSelected((s) => ({ ...s, [c.id]: !!v }))} data-testid={`post-check-${c.id}`} />
+                    <span className="text-sm font-medium text-slate-700">{c.nama}</span>
+                  </span>
+                  <span className="font-mono-num text-sm text-red-600">{formatRupiah(c.nominal)}</span>
+                </label>
+              ))}
+              {fixedCosts.length === 0 && <p className="py-4 text-center text-sm text-slate-400">Belum ada biaya tetap.</p>}
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2 text-sm">
+              <span className="font-semibold text-slate-700">Total dicatat</span>
+              <span className="font-mono-num font-bold text-red-600" data-testid="post-total">{formatRupiah(postTotal)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPostOpen(false)}>Batal</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={postToKas} disabled={selectedList.length === 0} data-testid="confirm-post-btn">
+              Catat {selectedList.length} Biaya
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="ml-auto h-7 gap-1 px-2 text-indigo-600 hover:text-indigo-700" data-testid="manage-fixed-costs-btn">
+          <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-indigo-600 hover:text-indigo-700" data-testid="manage-fixed-costs-btn">
             <Settings2 size={14} /> Kelola
           </Button>
         </DialogTrigger>
