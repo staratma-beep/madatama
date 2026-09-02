@@ -1,0 +1,22 @@
+{
+  "summary": "RETEST PASSED. Fix in hapusNota() verified: after deleting a nota (qty=3), stok column (data-testid hpp-stok-<id>) restored from 7 to 10 in ~207ms (<500ms), and backend GET /api/products confirms stok=10. Regression: Jual qty=3 from stok=10 -> 7 also instantly (~126ms). UI and backend fully in sync. Test data cleaned up (sales deleted, product removed).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_stok_flow.py"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HPPKalkulator.jsx is ~551 lines - consider splitting Jual/TambahStok/SalinMargin/Report dialogs and Riwayat Nota into separate components for maintainability (approaching 700-line guideline).",
+    "confirmJual and hapusNota await createSale/deleteSale BEFORE the optimistic setRows update. Order is correct/safe (no rollback needed on failure), but the 'optimism' is really post-server. Acceptable given <300ms observed latency."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped)", "frontend": "100% (2/2 scenarios pass)" },
+  "seed_data_creation": "Created 1 Branding product via hpp-add, set harga=50000, stok=10; created 1 sale qty=3; then deleted sale and product via API. Environment restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "hapusNota fix confirmed. Timings observed: Jual 126ms, DeleteNota 207ms (both <500ms). Backend /api/products stays in sync. No follow-up required.",
+  "rca of the issue": "Resolved. Previous iteration_3 bug: hapusNota did not refresh product rows. Fix: added optimistic setRows(+qty) for s.product_id followed by await refresh() in hapusNota (lines 165-175). Both frontend state and backend re-fetch now synchronize the Stok column immediately after deleting a nota."
+}

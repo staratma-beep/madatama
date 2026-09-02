@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only test of HPP Kalkulator instant stok updates. Optimistic UI fix on Jual works perfectly (stok 10→7 within ~152ms, well under 500ms). Backend and UI stay consistent. Tambah Stok Cepat also updates instantly (~105ms). BUG FOUND: deleting a nota restores stok on the backend (15) but the UI table still shows the pre-delete value (12) because hapusNota() does not call refresh() to reload products.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HPPKalkulator.hapusNota",
+        "issue": "After deleting a sale/nota, backend restores stok (+qty) but the Stok column in HPP table is NOT refreshed. UI shows stale value until user manually reloads or refetches. onSold->reload only refreshes App-level (transactions/records), not HPPKalkulator's rows/products state.",
+        "selector": "[data-testid=\"nota-delete-<saleId>\"] -> [data-testid=\"hpp-stok-<productId>\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Delete nota -> stok restore visualization",
+        "issue": "Backend correctly $inc stok +qty in DELETE /api/sales/{id}, but frontend does not re-fetch products after deletion. Need to call refresh() (or optimistic setRows) in hapusNota, and ideally also in App.reload chain so linked components stay in sync.",
+        "affected_selectors": ["[data-testid=\"hpp-stok-<id>\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_stok_flow.py"],
+  "action_items": [
+    "In /app/frontend/src/components/HPPKalkulator.jsx hapusNota(), add optimistic setRows to bump stok back by s.qty when s.product_id exists, then await refresh() so table & backend re-sync. Example fix: after api.deleteSale, do setRows(rs => rs.map(x => x.id === s.product_id ? { ...x, stok: (parseInt(x.stok,10)||0) + s.qty } : x)); await refresh();"
+  ],
+  "critical_code_review_comments": [
+    "hapusNota() lacks refresh()/optimistic stok restore — inconsistent with confirmJual/confirmTambahStok which both refresh.",
+    "HPPKalkulator is 547 lines — consider splitting Jual dialog, Tambah Stok dialog, Salin Margin dialog, Report dialog, and Riwayat Nota into separate components for maintainability (>700 line guideline; approaching threshold and already dense).",
+    "confirmJual: on backend failure the optimistic setRows still runs before await; since createSale is awaited BEFORE setRows the current order is safe, but if network is slow the UI update is delayed until server responds — could be moved BEFORE createSale for true optimism (and rolled back on failure)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped)", "frontend": "80% (4 of 5 scenarios pass)" },
+  "seed_data_creation": "Created 1 temporary Branding product (Produk Baru, harga 50000, stok 10) then cleaned up: sale deleted via UI + product deleted via DELETE /api/products/{id}.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Primary optimistic-update fix on Jual is confirmed working (152ms instant update, persists post-refresh, matches backend). Only remaining failure: hapusNota does not visually restore stok. After main agent adds optimistic setRows + refresh() in hapusNota, re-run the delete-nota portion of iteration_3 test: create product stok=10, jual qty=3 -> confirm stok=7, delete the created nota, poll hpp-stok-<id> to become 10 within <500ms and confirm backend GET /api/products returns stok=10.",
+  "rca of the issue": "hapusNota in HPPKalkulator.jsx (lines 165-171) only removes the sale from local sales state and calls parent onSold (App.reload). App.reload does NOT re-fetch products; only HPPKalkulator.refresh() does. Therefore rows[] retains the post-sale stok value (12) even though DB has 15. Fix: add optimistic setRows for product_id and/or await refresh() inside hapusNota."
+}

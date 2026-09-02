@@ -154,6 +154,7 @@ export const HPPKalkulator = ({ onSold }) => {
       product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
       qty, harga_satuan: harga, hpp_satuan: hpp, diskon: diskonRp, pembeli: jualPembeli, tanggal: todayISO(),
     });
+    setRows((rs) => rs.map((x) => (x.id === jualRow.id ? { ...x, stok: (parseInt(x.stok, 10) || 0) - qty } : x)));
     toast.success(`${jualRow.nama} ×${qty} dicatat ${formatRupiah(sale.total)}`);
     if (cetak) downloadNota(sale, profile);
     setJualOpen(false);
@@ -164,9 +165,13 @@ export const HPPKalkulator = ({ onSold }) => {
   const hapusNota = async (s) => {
     await api.deleteSale(s.id);
     setSales((arr) => arr.filter((x) => x.id !== s.id));
+    if (s.product_id) {
+      setRows((rs) => rs.map((x) => (x.id === s.product_id ? { ...x, stok: (parseInt(x.stok, 10) || 0) + (s.qty || 0) } : x)));
+    }
     setNotaDel(null);
+    await refresh();
     onSold && onSold();
-    toast.success("Nota & transaksi kas dihapus");
+    toast.success("Nota dihapus, stok dikembalikan");
   };
 
   const applySalin = async () => {
