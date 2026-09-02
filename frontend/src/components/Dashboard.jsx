@@ -1,6 +1,6 @@
 import React from "react";
 import { formatRupiah, monthLabel } from "../lib/format";
-import { Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, Boxes } from "lucide-react";
 
 const Card = ({ title, value, sub, icon: Icon, accent, testId, valueClass }) => (
   <div
@@ -21,9 +21,9 @@ const Card = ({ title, value, sub, icon: Icon, accent, testId, valueClass }) => 
   </div>
 );
 
-export const Dashboard = ({ cashBalance, monthProfit, currentMonthKey, piutang, utang }) => {
+export const Dashboard = ({ cashBalance, monthProfit, currentMonthKey, piutang, utang, labaProduk }) => {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <Card
         title="Saldo Kas Saat Ini"
         value={cashBalance}
@@ -57,6 +57,15 @@ export const Dashboard = ({ cashBalance, monthProfit, currentMonthKey, piutang, 
         valueClass="text-amber-600"
         sub="Kewajiban yang belum dibayar"
         testId="card-utang"
+      />
+      <Card
+        title={`Laba Produk ${monthLabel(currentMonthKey).split(" ")[0]}`}
+        value={labaProduk || 0}
+        icon={Boxes}
+        accent="bg-fuchsia-500"
+        valueClass={(labaProduk || 0) >= 0 ? "text-fuchsia-600" : "text-red-600"}
+        sub="Laba kotor penjualan produk"
+        testId="card-laba-produk"
       />
     </div>
   );

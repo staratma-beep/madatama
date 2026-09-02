@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, monthLabel } from "../lib/format";
+import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, monthLabel, formatTanggal } from "../lib/format";
 import { api } from "../lib/api";
 import { downloadNota } from "../lib/nota";
 import { Button } from "./ui/button";
@@ -17,7 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -59,6 +59,8 @@ export const HPPKalkulator = ({ onSold }) => {
   const [jualRow, setJualRow] = useState(null);
   const [jualQty, setJualQty] = useState("1");
   const [jualPembeli, setJualPembeli] = useState("");
+  const [jualDiskon, setJualDiskon] = useState("0");
+  const [notaDel, setNotaDel] = useState(null);
 
   const refresh = useCallback(async () => {
     const [p, s] = await Promise.all([api.getProducts(), api.getSales()]);
@@ -100,6 +102,7 @@ export const HPPKalkulator = ({ onSold }) => {
     setJualRow(r);
     setJualQty("1");
     setJualPembeli("");
+    setJualDiskon("0");
     setJualOpen(true);
   };
 
@@ -110,13 +113,21 @@ export const HPPKalkulator = ({ onSold }) => {
     const qty = Math.max(1, parseInt(jualQty, 10) || 1);
     const sale = await api.createSale({
       product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
-      qty, harga_satuan: harga, hpp_satuan: hpp, pembeli: jualPembeli, tanggal: todayISO(),
+      qty, harga_satuan: harga, hpp_satuan: hpp, diskon: parseNumber(jualDiskon), pembeli: jualPembeli, tanggal: todayISO(),
     });
     toast.success(`${jualRow.nama} ×${qty} dicatat ${formatRupiah(sale.total)}`);
     if (cetak) downloadNota(sale);
     setSales((s) => [...s, sale]);
     setJualOpen(false);
     onSold && onSold();
+  };
+
+  const hapusNota = async (s) => {
+    await api.deleteSale(s.id);
+    setSales((arr) => arr.filter((x) => x.id !== s.id));
+    setNotaDel(null);
+    onSold && onSold();
+    toast.success("Nota & transaksi kas dihapus");
   };
 
   const curMonth = monthKey(todayISO());
@@ -270,6 +281,31 @@ export const HPPKalkulator = ({ onSold }) => {
         )}
       </div>
 
+      <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="riwayat-nota">
+        <div className="mb-3 flex items-center gap-2">
+          <ReceiptText size={18} className="text-indigo-500" />
+          <h3 className="font-heading text-base font-bold text-slate-900">Riwayat Nota Penjualan</h3>
+          <span className="ml-auto text-xs text-slate-400">{sales.length} nota</span>
+        </div>
+        {sales.length === 0 ? (
+          <p className="py-4 text-center text-sm text-slate-400">Belum ada nota. Nota dibuat otomatis saat menekan Jual.</p>
+        ) : (
+          <div className="max-h-72 space-y-1.5 overflow-y-auto">
+            {[...sales].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map((s) => (
+              <div key={s.id} className="flex items-center gap-3 rounded-lg border border-slate-100 px-3 py-2" data-testid={`nota-row-${s.id}`}>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{s.nota_no} · {s.nama} ×{s.qty}</p>
+                  <p className="truncate text-xs text-slate-400">{formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · diskon ${formatRupiah(s.diskon)}` : ""}</p>
+                </div>
+                <span className="whitespace-nowrap font-mono-num text-sm font-semibold text-emerald-600">{formatRupiah(s.total)}</span>
+                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => downloadNota(s)} data-testid={`nota-print-${s.id}`}><Download size={14} className="mr-1" />Nota</Button>
+                <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-600" data-testid={`nota-delete-${s.id}`}><Trash2 size={16} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
           {KATEGORI.map((k) => (
@@ -290,27 +326,34 @@ export const HPPKalkulator = ({ onSold }) => {
           {jualRow && (() => {
             const harga = parseNumber(jualRow.harga_jual);
             const qty = Math.max(1, parseInt(jualQty, 10) || 1);
-            const total = harga * qty;
+            const diskon = Math.max(0, parseNumber(jualDiskon));
+            const subtotal = harga * qty;
+            const total = Math.max(0, subtotal - diskon);
             return (
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Jumlah (Qty)</Label>
-                    <Input
-                      type="number" min="1" value={jualQty}
-                      onChange={(e) => setJualQty(e.target.value)}
-                      data-testid="jual-qty-input"
-                    />
+                    <Input type="number" min="1" value={jualQty} onChange={(e) => setJualQty(e.target.value)} data-testid="jual-qty-input" />
                   </div>
                   <div>
                     <Label>Harga Satuan</Label>
                     <Input value={formatRupiah(harga)} disabled className="font-mono-num" />
                   </div>
                 </div>
-                <div>
-                  <Label>Nama Pembeli (opsional)</Label>
-                  <Input value={jualPembeli} onChange={(e) => setJualPembeli(e.target.value)} placeholder="cth: Toko Bu Ani" data-testid="jual-pembeli-input" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nama Pembeli (opsional)</Label>
+                    <Input value={jualPembeli} onChange={(e) => setJualPembeli(e.target.value)} placeholder="cth: Toko Bu Ani" data-testid="jual-pembeli-input" />
+                  </div>
+                  <div>
+                    <Label>Diskon (Rp, opsional)</Label>
+                    <Input inputMode="numeric" value={jualDiskon} onChange={(e) => setJualDiskon(formatNumberInput(e.target.value))} data-testid="jual-diskon-input" />
+                  </div>
                 </div>
+                {diskon > 0 && (
+                  <p className="px-1 text-xs text-slate-500" data-testid="jual-diskon-info">Subtotal {formatRupiah(subtotal)} − Diskon {formatRupiah(diskon)}</p>
+                )}
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
                   <span className="text-sm font-semibold text-emerald-700">Total Pemasukan</span>
                   <span className="font-mono-num text-xl font-bold text-emerald-700" data-testid="jual-total">{formatRupiah(total)}</span>
@@ -336,6 +379,19 @@ export const HPPKalkulator = ({ onSold }) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => removeRow(toDelete.id)} data-testid="confirm-delete-product-btn">Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!notaDel} onOpenChange={(o) => !o && setNotaDel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus nota?</AlertDialogTitle>
+            <AlertDialogDescription>Nota {notaDel?.nota_no} ({notaDel?.nama}) akan dihapus, termasuk transaksi pemasukannya di Buku Kas.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => hapusNota(notaDel)} data-testid="confirm-delete-nota-btn">Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

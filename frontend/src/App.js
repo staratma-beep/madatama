@@ -21,16 +21,17 @@ function App() {
   const [records, setRecords] = useState([]);
   const [profitShares, setProfitShares] = useState([]);
   const [fixedCosts, setFixedCosts] = useState([]);
+  const [sales, setSales] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
   const [tab, setTab] = useState("kas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const reload = useCallback(async () => {
-    const [t, r, p, s, fc] = await Promise.all([
-      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(),
+    const [t, r, p, s, fc, sl] = await Promise.all([
+      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(),
     ]);
-    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc);
+    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc); setSales(sl);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -40,6 +41,7 @@ function App() {
   const monthProfit = useMemo(() => monthDetail(transactions, curMonth).laba, [transactions, curMonth]);
   const totalPiutang = useMemo(() => records.filter((r) => r.jenis === "Piutang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const totalUtang = useMemo(() => records.filter((r) => r.jenis === "Utang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
+  const labaProduk = useMemo(() => sales.filter((s) => monthKey(s.tanggal) === curMonth).reduce((a, s) => a + (s.laba || 0), 0), [sales, curMonth]);
 
   const handleAdd = () => { setEditing(null); setDialogOpen(true); };
   const handleEdit = (t) => { setEditing(t); setDialogOpen(true); };
@@ -90,7 +92,7 @@ function App() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Dashboard
           cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
-          piutang={totalPiutang} utang={totalUtang}
+          piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
         />
 
         <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />

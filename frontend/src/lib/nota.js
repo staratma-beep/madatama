@@ -44,10 +44,11 @@ export function buildNotaHTML(sale) {
       <table>
         <thead><tr><th>Produk</th><th class="r">Qty</th><th class="r">Harga</th><th class="r">Subtotal</th></tr></thead>
         <tbody>
-          <tr><td>${sale.nama}</td><td class="r">${sale.qty}</td><td class="r">${formatRupiah(sale.harga_satuan)}</td><td class="r">${formatRupiah(sale.total)}</td></tr>
+          <tr><td>${sale.nama}</td><td class="r">${sale.qty}</td><td class="r">${formatRupiah(sale.harga_satuan)}</td><td class="r">${formatRupiah(sale.harga_satuan * sale.qty)}</td></tr>
         </tbody>
       </table>
     </div>
+    ${sale.diskon ? `<div class="meta" style="border-top:1px dashed #e2e8f0"><div><span>Subtotal</span><b>${formatRupiah(sale.harga_satuan * sale.qty)}</b></div><div><span>Diskon</span><b>- ${formatRupiah(sale.diskon)}</b></div></div>` : ``}
     <div class="total"><span>Total</span><b>${formatRupiah(sale.total)}</b></div>
     <div class="foot">Terima kasih atas kepercayaan Anda 🙏</div>
   </div>

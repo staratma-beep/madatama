@@ -154,6 +154,7 @@ class Sale(BaseModel):
     qty: int = 1
     harga_satuan: float = 0
     hpp_satuan: float = 0
+    diskon: float = 0
     total: float = 0
     laba: float = 0
     product_id: Optional[str] = None
@@ -167,6 +168,7 @@ class SaleCreate(BaseModel):
     qty: int = 1
     harga_satuan: float = 0
     hpp_satuan: float = 0
+    diskon: float = 0
     pembeli: Optional[str] = ""
     product_id: Optional[str] = None
     tanggal: Optional[str] = None
@@ -398,8 +400,10 @@ async def get_sales():
 async def create_sale(input: SaleCreate):
     tanggal = input.tanggal or datetime.now(WIB).strftime("%Y-%m-%d")
     qty = max(1, int(input.qty or 1))
-    total = input.harga_satuan * qty
-    laba = (input.harga_satuan - input.hpp_satuan) * qty
+    diskon = max(0, input.diskon or 0)
+    subtotal = input.harga_satuan * qty
+    total = max(0, subtotal - diskon)
+    laba = (input.harga_satuan - input.hpp_satuan) * qty - diskon
     jenis = _SALE_JENIS.get(input.kategori, "Lain-lain")
     seq = await db.sales.count_documents({}) + 1
     nota_no = f"NT-{tanggal.replace('-', '')}-{seq:03d}"
@@ -419,7 +423,7 @@ async def create_sale(input: SaleCreate):
     sale = Sale(
         nota_no=nota_no, tanggal=tanggal, nama=input.nama, kategori=input.kategori,
         jenis=jenis, pembeli=input.pembeli or "", qty=qty, harga_satuan=input.harga_satuan,
-        hpp_satuan=input.hpp_satuan, total=total, laba=laba, product_id=input.product_id,
+        hpp_satuan=input.hpp_satuan, diskon=diskon, total=total, laba=laba, product_id=input.product_id,
         transaction_id=txn.id,
     )
     await db.sales.insert_one(sale.model_dump())
