@@ -8,12 +8,13 @@ import { BukuKas } from "@/components/BukuKas";
 import { RekapBulanan } from "@/components/RekapBulanan";
 import { LabaRugi } from "@/components/LabaRugi";
 import { PiutangUtang } from "@/components/PiutangUtang";
+import { HPPKalkulator } from "@/components/HPPKalkulator";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { FixedCostsBar } from "@/components/FixedCostsBar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toaster, toast } from "sonner";
-import { Printer, BookText, CalendarRange, PieChart, HandCoins, Plus } from "lucide-react";
+import { Printer, BookText, CalendarRange, PieChart, HandCoins, Plus, Calculator } from "lucide-react";
 
 function App() {
   const [transactions, setTransactions] = useState([]);
@@ -61,6 +62,7 @@ function App() {
 
   const tabs = [
     { key: "kas", label: "Buku Kas", icon: BookText },
+    { key: "hpp", label: "Kalkulator HPP", icon: Calculator },
     { key: "rekap", label: "Rekap Bulanan", icon: CalendarRange },
     { key: "labarugi", label: "Laba Rugi & Bagi Hasil", icon: PieChart },
     { key: "piutang", label: "Piutang & Utang", icon: HandCoins },
@@ -94,7 +96,7 @@ function App() {
         <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-slate-100 p-1 sm:grid-cols-4" data-testid="main-tabs">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-slate-100 p-1 sm:grid-cols-5" data-testid="main-tabs">
             {tabs.map((t) => (
               <TabsTrigger key={t.key} value={t.key} className="gap-1.5 py-2 data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`tab-${t.key}`}>
                 <t.icon size={15} /> <span className="text-xs sm:text-sm">{t.label}</span>
@@ -107,6 +109,9 @@ function App() {
               transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance}
               onAdd={handleAdd} onEdit={handleEdit} onDelete={handleDelete}
             />
+          </TabsContent>
+          <TabsContent value="hpp" className="mt-4">
+            <HPPKalkulator onSold={reload} />
           </TabsContent>
           <TabsContent value="rekap" className="mt-4">
             <RekapBulanan transactions={transactions} />

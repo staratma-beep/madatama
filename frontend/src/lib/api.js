@@ -30,6 +30,11 @@ export const api = {
   updateFixedCost: (id, d) => http.put(`/fixed-costs/${id}`, d).then((r) => r.data),
   deleteFixedCost: (id) => http.delete(`/fixed-costs/${id}`).then((r) => r.data),
 
+  getProducts: () => http.get("/products").then((r) => r.data),
+  createProduct: (d) => http.post("/products", d).then((r) => r.data),
+  updateProduct: (id, d) => http.put(`/products/${id}`, d).then((r) => r.data),
+  deleteProduct: (id) => http.delete(`/products/${id}`).then((r) => r.data),
+
   backup: () => http.get("/backup").then((r) => r.data),
   restore: (d) => http.post("/restore", d).then((r) => r.data),
   importTransactions: (items) => http.post("/import-transactions", items).then((r) => r.data),

@@ -111,11 +111,41 @@ class FixedCostCreate(BaseModel):
     nominal: float
 
 
+_PRODUCT_SEED = {
+    "Branding": ["Kaos Polos", "Sablon Kaos", "Mug", "Lanyard", "Gantungan Kunci Lanyard", "Sablon Topi", "Sablon Jersey", "Totebag", "Name Tag"],
+    "Printing": ["Spanduk", "Brosur", "A3", "Stiker", "Undangan", "PIN", "Bendera/Umbul-umbul"],
+    "Advertising": ["Neon Box", "Akrilik", "Cutting Stiker"],
+}
+
+
+class Product(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kategori: str
+    nama: str
+    jenis: str = "Sendiri"
+    bahan_baku: float = 0
+    jasa_mitra: float = 0
+    tambahan: float = 0
+    harga_jual: float = 0
+    urutan: int = 0
+
+
+class ProductCreate(BaseModel):
+    kategori: str
+    nama: str
+    jenis: str = "Sendiri"
+    bahan_baku: float = 0
+    jasa_mitra: float = 0
+    tambahan: float = 0
+    harga_jual: float = 0
+
+
 class BackupData(BaseModel):
     transactions: List[dict] = []
     records: List[dict] = []
     profit_shares: List[dict] = []
     fixed_costs: List[dict] = []
+    products: List[dict] = []
     settings: dict = {}
 
 
@@ -283,6 +313,47 @@ async def delete_fixed_cost(fid: str):
     return {"ok": True}
 
 
+# ---------------- Products (Kalkulator HPP) ----------------
+@api_router.get("/products", response_model=List[Product])
+async def get_products():
+    docs = await db.products.find({}, {"_id": 0}).to_list(2000)
+    if not docs:
+        objs = []
+        i = 0
+        for kategori, names in _PRODUCT_SEED.items():
+            for nama in names:
+                objs.append(Product(kategori=kategori, nama=nama, urutan=i).model_dump())
+                i += 1
+        await db.products.insert_many(objs)
+        docs = objs
+    docs.sort(key=lambda d: d.get("urutan", 0))
+    return docs
+
+
+@api_router.post("/products", response_model=Product)
+async def create_product(input: ProductCreate):
+    count = await db.products.count_documents({})
+    obj = Product(**input.model_dump(), urutan=count)
+    await db.products.insert_one(obj.model_dump())
+    return obj
+
+
+@api_router.put("/products/{pid}", response_model=Product)
+async def update_product(pid: str, input: ProductCreate):
+    existing = await db.products.find_one({"id": pid}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
+    updated = {**existing, **input.model_dump()}
+    await db.products.replace_one({"id": pid}, updated)
+    return updated
+
+
+@api_router.delete("/products/{pid}")
+async def delete_product(pid: str):
+    await db.products.delete_one({"id": pid})
+    return {"ok": True}
+
+
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)
 async def get_settings():
@@ -309,12 +380,14 @@ async def backup():
     records = await db.records.find({}, {"_id": 0}).to_list(10000)
     profit_shares = await db.profit_shares.find({}, {"_id": 0}).to_list(10000)
     fixed_costs = await db.fixed_costs.find({}, {"_id": 0}).to_list(1000)
+    products = await db.products.find({}, {"_id": 0}).to_list(2000)
     settings = await db.settings.find_one({"key": "main"}, {"_id": 0}) or {}
     return BackupData(
         transactions=transactions,
         records=records,
         profit_shares=profit_shares,
         fixed_costs=fixed_costs,
+        products=products,
         settings=settings,
     )
 
@@ -325,6 +398,7 @@ async def restore(data: BackupData):
     await db.records.delete_many({})
     await db.profit_shares.delete_many({})
     await db.fixed_costs.delete_many({})
+    await db.products.delete_many({})
     await db.settings.delete_many({})
     if data.transactions:
         await db.transactions.insert_many(data.transactions)
@@ -334,6 +408,8 @@ async def restore(data: BackupData):
         await db.profit_shares.insert_many(data.profit_shares)
     if data.fixed_costs:
         await db.fixed_costs.insert_many(data.fixed_costs)
+    if data.products:
+        await db.products.insert_many(data.products)
     if data.settings:
         s = data.settings
         s["key"] = "main"

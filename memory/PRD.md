@@ -33,3 +33,8 @@ Pemilik/pengelola usaha percetakan kecil yang sering input transaksi lewat HP.
 
 ## Next Tasks
 - Tunggu feedback user.
+
+## Update Log
+- 2026-06: Biaya Tetap Bulanan kini CRUD (collection fixed_costs, endpoint /api/fixed-costs) + tombol "Catat ke Kas" untuk posting biaya tetap jadi transaksi Pengeluaran sekali klik.
+- 2026-06: Form Tambah Transaksi auto-fill Nominal & Keterangan saat memilih Jenis yang cocok dengan biaya tetap (KUR/Internet/Listrik/Operasional).
+- 2026-06: Tab baru "Kalkulator HPP Produk" (collection products, endpoint /api/products). 3 kategori (Branding/Printing/Advertising) dengan produk seed default. Tabel editable: nama, jenis (Sendiri/Mitra/Campuran), bahan baku, jasa mitra, tambahan, Total HPP (auto), harga jual, laba (auto), margin% (auto), rata-rata margin per kategori. Tambah/hapus baris. Tombol "Jual" mencatat produk ke Buku Kas sebagai Pemasukan (jenis sesuai kategori) tanpa mengetik. Semua tersimpan di server; termasuk backup/restore.
