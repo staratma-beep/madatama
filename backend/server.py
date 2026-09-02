@@ -140,12 +140,45 @@ class ProductCreate(BaseModel):
     harga_jual: float = 0
 
 
+_SALE_JENIS = {"Branding": "Penjualan Branding", "Printing": "Penjualan Printing", "Advertising": "Penjualan Advertising"}
+
+
+class Sale(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    nota_no: str
+    tanggal: str
+    nama: str
+    kategori: str
+    jenis: str
+    pembeli: Optional[str] = ""
+    qty: int = 1
+    harga_satuan: float = 0
+    hpp_satuan: float = 0
+    total: float = 0
+    laba: float = 0
+    product_id: Optional[str] = None
+    transaction_id: Optional[str] = None
+    created_at: str = Field(default_factory=now_iso)
+
+
+class SaleCreate(BaseModel):
+    nama: str
+    kategori: str
+    qty: int = 1
+    harga_satuan: float = 0
+    hpp_satuan: float = 0
+    pembeli: Optional[str] = ""
+    product_id: Optional[str] = None
+    tanggal: Optional[str] = None
+
+
 class BackupData(BaseModel):
     transactions: List[dict] = []
     records: List[dict] = []
     profit_shares: List[dict] = []
     fixed_costs: List[dict] = []
     products: List[dict] = []
+    sales: List[dict] = []
     settings: dict = {}
 
 
@@ -354,6 +387,54 @@ async def delete_product(pid: str):
     return {"ok": True}
 
 
+# ---------------- Sales (Penjualan Produk + Nota) ----------------
+@api_router.get("/sales", response_model=List[Sale])
+async def get_sales():
+    docs = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    return docs
+
+
+@api_router.post("/sales", response_model=Sale)
+async def create_sale(input: SaleCreate):
+    tanggal = input.tanggal or datetime.now(WIB).strftime("%Y-%m-%d")
+    qty = max(1, int(input.qty or 1))
+    total = input.harga_satuan * qty
+    laba = (input.harga_satuan - input.hpp_satuan) * qty
+    jenis = _SALE_JENIS.get(input.kategori, "Lain-lain")
+    seq = await db.sales.count_documents({}) + 1
+    nota_no = f"NT-{tanggal.replace('-', '')}-{seq:03d}"
+
+    ket = f"{input.nama} x{qty}" if qty > 1 else input.nama
+    txn = Transaction(
+        tanggal=tanggal,
+        keterangan=ket,
+        kategori="Pemasukan",
+        jenis=jenis,
+        nominal=total,
+        keterangan_tambahan=f"Nota {nota_no}" + (f" - {input.pembeli}" if input.pembeli else ""),
+        auto_generated=True,
+    )
+    await db.transactions.insert_one(txn.model_dump())
+
+    sale = Sale(
+        nota_no=nota_no, tanggal=tanggal, nama=input.nama, kategori=input.kategori,
+        jenis=jenis, pembeli=input.pembeli or "", qty=qty, harga_satuan=input.harga_satuan,
+        hpp_satuan=input.hpp_satuan, total=total, laba=laba, product_id=input.product_id,
+        transaction_id=txn.id,
+    )
+    await db.sales.insert_one(sale.model_dump())
+    return sale
+
+
+@api_router.delete("/sales/{sid}")
+async def delete_sale(sid: str):
+    sale = await db.sales.find_one({"id": sid}, {"_id": 0})
+    if sale and sale.get("transaction_id"):
+        await db.transactions.delete_one({"id": sale["transaction_id"]})
+    await db.sales.delete_one({"id": sid})
+    return {"ok": True}
+
+
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)
 async def get_settings():
@@ -381,6 +462,7 @@ async def backup():
     profit_shares = await db.profit_shares.find({}, {"_id": 0}).to_list(10000)
     fixed_costs = await db.fixed_costs.find({}, {"_id": 0}).to_list(1000)
     products = await db.products.find({}, {"_id": 0}).to_list(2000)
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
     settings = await db.settings.find_one({"key": "main"}, {"_id": 0}) or {}
     return BackupData(
         transactions=transactions,
@@ -388,6 +470,7 @@ async def backup():
         profit_shares=profit_shares,
         fixed_costs=fixed_costs,
         products=products,
+        sales=sales,
         settings=settings,
     )
 
@@ -399,6 +482,7 @@ async def restore(data: BackupData):
     await db.profit_shares.delete_many({})
     await db.fixed_costs.delete_many({})
     await db.products.delete_many({})
+    await db.sales.delete_many({})
     await db.settings.delete_many({})
     if data.transactions:
         await db.transactions.insert_many(data.transactions)
@@ -410,6 +494,8 @@ async def restore(data: BackupData):
         await db.fixed_costs.insert_many(data.fixed_costs)
     if data.products:
         await db.products.insert_many(data.products)
+    if data.sales:
+        await db.sales.insert_many(data.sales)
     if data.settings:
         s = data.settings
         s["key"] = "main"

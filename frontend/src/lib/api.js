@@ -35,6 +35,10 @@ export const api = {
   updateProduct: (id, d) => http.put(`/products/${id}`, d).then((r) => r.data),
   deleteProduct: (id) => http.delete(`/products/${id}`).then((r) => r.data),
 
+  getSales: () => http.get("/sales").then((r) => r.data),
+  createSale: (d) => http.post("/sales", d).then((r) => r.data),
+  deleteSale: (id) => http.delete(`/sales/${id}`).then((r) => r.data),
+
   backup: () => http.get("/backup").then((r) => r.data),
   restore: (d) => http.post("/restore", d).then((r) => r.data),
   importTransactions: (items) => http.post("/import-transactions", items).then((r) => r.data),

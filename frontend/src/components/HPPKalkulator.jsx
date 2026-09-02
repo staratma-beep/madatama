@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { formatRupiah, formatNumberInput, parseNumber, todayISO } from "../lib/format";
+import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, monthLabel } from "../lib/format";
 import { api } from "../lib/api";
+import { downloadNota } from "../lib/nota";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "./ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "./ui/dialog";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
-const SALE_JENIS = { Branding: "Penjualan Branding", Printing: "Penjualan Printing", Advertising: "Penjualan Advertising" };
 
 const fmtRow = (p) => ({
   ...p,
@@ -48,12 +52,18 @@ const NumCell = ({ value, onChange, onBlur, testId }) => (
 
 export const HPPKalkulator = ({ onSold }) => {
   const [rows, setRows] = useState([]);
+  const [sales, setSales] = useState([]);
   const [tab, setTab] = useState("Branding");
   const [toDelete, setToDelete] = useState(null);
+  const [jualOpen, setJualOpen] = useState(false);
+  const [jualRow, setJualRow] = useState(null);
+  const [jualQty, setJualQty] = useState("1");
+  const [jualPembeli, setJualPembeli] = useState("");
 
   const refresh = useCallback(async () => {
-    const p = await api.getProducts();
+    const [p, s] = await Promise.all([api.getProducts(), api.getSales()]);
     setRows(p.map(fmtRow));
+    setSales(s);
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -85,20 +95,42 @@ export const HPPKalkulator = ({ onSold }) => {
     toast.success("Produk dihapus");
   };
 
-  const jual = async (r) => {
-    const harga = parseNumber(r.harga_jual);
-    if (harga <= 0) { toast.error("Isi Harga Jual dulu"); return; }
-    await api.createTransaction({
-      tanggal: todayISO(),
-      keterangan: r.nama,
-      kategori: "Pemasukan",
-      jenis: SALE_JENIS[r.kategori],
-      nominal: harga,
-      keterangan_tambahan: `Penjualan produk (${r.kategori})`,
+  const openJual = (r) => {
+    if (parseNumber(r.harga_jual) <= 0) { toast.error("Isi Harga Jual dulu"); return; }
+    setJualRow(r);
+    setJualQty("1");
+    setJualPembeli("");
+    setJualOpen(true);
+  };
+
+  const confirmJual = async (cetak) => {
+    if (!jualRow) return;
+    const harga = parseNumber(jualRow.harga_jual);
+    const hpp = parseNumber(jualRow.bahan_baku) + parseNumber(jualRow.jasa_mitra) + parseNumber(jualRow.tambahan);
+    const qty = Math.max(1, parseInt(jualQty, 10) || 1);
+    const sale = await api.createSale({
+      product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
+      qty, harga_satuan: harga, hpp_satuan: hpp, pembeli: jualPembeli, tanggal: todayISO(),
     });
-    toast.success(`${r.nama} dicatat sebagai pemasukan ${formatRupiah(harga)}`);
+    toast.success(`${jualRow.nama} ×${qty} dicatat ${formatRupiah(sale.total)}`);
+    if (cetak) downloadNota(sale);
+    setSales((s) => [...s, sale]);
+    setJualOpen(false);
     onSold && onSold();
   };
+
+  const curMonth = monthKey(todayISO());
+  const monthSales = sales.filter((s) => monthKey(s.tanggal) === curMonth);
+  const agg = {};
+  monthSales.forEach((s) => {
+    if (!agg[s.nama]) agg[s.nama] = { nama: s.nama, kategori: s.kategori, qty: 0, omzet: 0, laba: 0 };
+    agg[s.nama].qty += s.qty;
+    agg[s.nama].omzet += s.total;
+    agg[s.nama].laba += s.laba;
+  });
+  const aggList = Object.values(agg);
+  const topSold = [...aggList].sort((a, b) => b.qty - a.qty).slice(0, 5);
+  const topProfit = [...aggList].sort((a, b) => b.laba - a.laba).slice(0, 5);
 
   const renderTable = (kategori) => {
     const items = rows.filter((r) => r.kategori === kategori);
@@ -158,7 +190,7 @@ export const HPPKalkulator = ({ onSold }) => {
                     <td className={`whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold ${laba >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-laba-${r.id}`}>{formatRupiah(laba)}</td>
                     <td className={`px-3 py-2 text-right font-mono-num ${margin >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-margin-${r.id}`}>{margin.toFixed(1)}%</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2 hover:bg-emerald-700" onClick={() => jual(r)} data-testid={`hpp-jual-${r.id}`}>
+                      <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2 hover:bg-emerald-700" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
                         <ShoppingCart size={14} className="mr-1" /> Jual
                       </Button>
                       <button onClick={() => setToDelete(r)} className="text-slate-300 hover:text-red-600 align-middle" data-testid={`hpp-delete-${r.id}`}>
@@ -197,6 +229,47 @@ export const HPPKalkulator = ({ onSold }) => {
         <p className="text-sm text-slate-500">Hitung HPP, laba, & margin. Klik <span className="font-semibold text-emerald-600">Jual</span> untuk catat penjualan ke Buku Kas tanpa mengetik.</p>
       </div>
 
+      <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="produk-terlaris">
+        <div className="mb-4 flex items-center gap-2">
+          <Trophy size={18} className="text-amber-500" />
+          <h3 className="font-heading text-base font-bold text-slate-900">Produk Terlaris — {monthLabel(curMonth)}</h3>
+        </div>
+        {aggList.length === 0 ? (
+          <p className="py-4 text-center text-sm text-slate-400">Belum ada penjualan bulan ini. Tekan tombol <b>Jual</b> pada produk.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Paling Sering Dijual</p>
+              <div className="space-y-1.5">
+                {topSold.map((p, i) => (
+                  <div key={p.nama} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-testid={`top-sold-${i}`}>
+                    <span className="flex items-center gap-2 text-sm">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{i + 1}</span>
+                      <span className="font-medium text-slate-700">{p.nama}</span>
+                    </span>
+                    <span className="font-mono-num text-sm font-semibold text-slate-800">{p.qty} pcs</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Paling Menguntungkan</p>
+              <div className="space-y-1.5">
+                {topProfit.map((p, i) => (
+                  <div key={p.nama} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-testid={`top-profit-${i}`}>
+                    <span className="flex items-center gap-2 text-sm">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">{i + 1}</span>
+                      <span className="font-medium text-slate-700">{p.nama}</span>
+                    </span>
+                    <span className="font-mono-num text-sm font-semibold text-emerald-600">{formatRupiah(p.laba)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
           {KATEGORI.map((k) => (
@@ -207,6 +280,52 @@ export const HPPKalkulator = ({ onSold }) => {
           <TabsContent key={k} value={k} className="mt-4">{renderTable(k)}</TabsContent>
         ))}
       </Tabs>
+
+      <Dialog open={jualOpen} onOpenChange={setJualOpen}>
+        <DialogContent className="max-w-sm" data-testid="jual-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Jual: {jualRow?.nama}</DialogTitle>
+            <DialogDescription>Otomatis tercatat sebagai pemasukan di Buku Kas.</DialogDescription>
+          </DialogHeader>
+          {jualRow && (() => {
+            const harga = parseNumber(jualRow.harga_jual);
+            const qty = Math.max(1, parseInt(jualQty, 10) || 1);
+            const total = harga * qty;
+            return (
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Jumlah (Qty)</Label>
+                    <Input
+                      type="number" min="1" value={jualQty}
+                      onChange={(e) => setJualQty(e.target.value)}
+                      data-testid="jual-qty-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>Harga Satuan</Label>
+                    <Input value={formatRupiah(harga)} disabled className="font-mono-num" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Nama Pembeli (opsional)</Label>
+                  <Input value={jualPembeli} onChange={(e) => setJualPembeli(e.target.value)} placeholder="cth: Toko Bu Ani" data-testid="jual-pembeli-input" />
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
+                  <span className="text-sm font-semibold text-emerald-700">Total Pemasukan</span>
+                  <span className="font-mono-num text-xl font-bold text-emerald-700" data-testid="jual-total">{formatRupiah(total)}</span>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => confirmJual(false)} data-testid="jual-catat-btn">Catat Saja</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => confirmJual(true)} data-testid="jual-cetak-btn">
+              <Download size={15} className="mr-1" /> Catat &amp; Unduh Nota
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
