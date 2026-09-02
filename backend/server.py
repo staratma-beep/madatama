@@ -90,6 +90,10 @@ class ProfitShareCreate(BaseModel):
 
 class Settings(BaseModel):
     saldo_awal: float = 0
+    nama_usaha: str = "Bukuku Pro"
+    alamat: str = ""
+    telepon: str = ""
+    logo: str = ""
 
 
 DEFAULT_FIXED_COSTS = [
@@ -445,14 +449,15 @@ async def get_settings():
     doc = await db.settings.find_one({"key": "main"}, {"_id": 0})
     if not doc:
         return Settings()
-    return Settings(saldo_awal=doc.get("saldo_awal", 0))
+    doc.pop("key", None)
+    return Settings(**doc)
 
 
 @api_router.put("/settings", response_model=Settings)
 async def update_settings(input: Settings):
     await db.settings.update_one(
         {"key": "main"},
-        {"$set": {"key": "main", "saldo_awal": input.saldo_awal}},
+        {"$set": {"key": "main", **input.model_dump()}},
         upsert=True,
     )
     return input

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, monthLabel, formatTanggal } from "../lib/format";
 import { api } from "../lib/api";
 import { downloadNota } from "../lib/nota";
+import { exportSalesCSV } from "../lib/salesExport";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -17,7 +18,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -61,11 +62,17 @@ export const HPPKalkulator = ({ onSold }) => {
   const [jualPembeli, setJualPembeli] = useState("");
   const [jualDiskon, setJualDiskon] = useState("0");
   const [notaDel, setNotaDel] = useState(null);
+  const [profile, setProfile] = useState({});
+  const [jualDiskonMode, setJualDiskonMode] = useState("rp");
+  const [salinOpen, setSalinOpen] = useState(false);
+  const [salinKategori, setSalinKategori] = useState("Branding");
+  const [salinMargin, setSalinMargin] = useState("30");
 
   const refresh = useCallback(async () => {
-    const [p, s] = await Promise.all([api.getProducts(), api.getSales()]);
+    const [p, s, st] = await Promise.all([api.getProducts(), api.getSales(), api.getSettings()]);
     setRows(p.map(fmtRow));
     setSales(s);
+    setProfile(st);
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -103,6 +110,7 @@ export const HPPKalkulator = ({ onSold }) => {
     setJualQty("1");
     setJualPembeli("");
     setJualDiskon("0");
+    setJualDiskonMode("rp");
     setJualOpen(true);
   };
 
@@ -111,12 +119,16 @@ export const HPPKalkulator = ({ onSold }) => {
     const harga = parseNumber(jualRow.harga_jual);
     const hpp = parseNumber(jualRow.bahan_baku) + parseNumber(jualRow.jasa_mitra) + parseNumber(jualRow.tambahan);
     const qty = Math.max(1, parseInt(jualQty, 10) || 1);
+    const subtotal = harga * qty;
+    const diskonRp = jualDiskonMode === "persen"
+      ? Math.round(subtotal * (parseNumber(jualDiskon) / 100))
+      : parseNumber(jualDiskon);
     const sale = await api.createSale({
       product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
-      qty, harga_satuan: harga, hpp_satuan: hpp, diskon: parseNumber(jualDiskon), pembeli: jualPembeli, tanggal: todayISO(),
+      qty, harga_satuan: harga, hpp_satuan: hpp, diskon: diskonRp, pembeli: jualPembeli, tanggal: todayISO(),
     });
     toast.success(`${jualRow.nama} ×${qty} dicatat ${formatRupiah(sale.total)}`);
-    if (cetak) downloadNota(sale);
+    if (cetak) downloadNota(sale, profile);
     setSales((s) => [...s, sale]);
     setJualOpen(false);
     onSold && onSold();
@@ -128,6 +140,25 @@ export const HPPKalkulator = ({ onSold }) => {
     setNotaDel(null);
     onSold && onSold();
     toast.success("Nota & transaksi kas dihapus");
+  };
+
+  const applySalin = async () => {
+    const m = parseFloat(salinMargin);
+    if (isNaN(m) || m < 0 || m >= 100) { toast.error("Margin harus 0–99%"); return; }
+    const tasks = [];
+    const updated = rows.map((r) => {
+      if (r.kategori !== salinKategori) return r;
+      const hpp = parseNumber(r.bahan_baku) + parseNumber(r.jasa_mitra) + parseNumber(r.tambahan);
+      if (hpp <= 0) return r;
+      const harga = Math.round(hpp / (1 - m / 100));
+      const nr = { ...r, harga_jual: formatNumberInput(String(harga)) };
+      tasks.push(api.updateProduct(r.id, toPayload(nr)));
+      return nr;
+    });
+    setRows(updated);
+    await Promise.all(tasks);
+    setSalinOpen(false);
+    toast.success(`Margin ${m}% diterapkan ke ${salinKategori}`);
   };
 
   const curMonth = monthKey(todayISO());
@@ -224,9 +255,12 @@ export const HPPKalkulator = ({ onSold }) => {
             </tfoot>
           </table>
         </div>
-        <div className="border-t border-slate-100 p-3">
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3">
           <Button variant="outline" size="sm" className="border-dashed" onClick={() => addRow(kategori)} data-testid={`hpp-add-${kategori}`}>
             <Plus size={14} className="mr-1" /> Tambah Produk
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { setSalinKategori(kategori); setSalinMargin("30"); setSalinOpen(true); }} data-testid={`hpp-salin-${kategori}`}>
+            <Percent size={14} className="mr-1" /> Samakan Margin
           </Button>
         </div>
       </div>
@@ -285,7 +319,12 @@ export const HPPKalkulator = ({ onSold }) => {
         <div className="mb-3 flex items-center gap-2">
           <ReceiptText size={18} className="text-indigo-500" />
           <h3 className="font-heading text-base font-bold text-slate-900">Riwayat Nota Penjualan</h3>
-          <span className="ml-auto text-xs text-slate-400">{sales.length} nota</span>
+          {sales.length > 0 && (
+            <Button variant="outline" size="sm" className="ml-auto h-8 gap-1" onClick={() => exportSalesCSV(sales)} data-testid="export-sales-btn">
+              <Download size={14} /> Export CSV
+            </Button>
+          )}
+          <span className="text-xs text-slate-400">{sales.length} nota</span>
         </div>
         {sales.length === 0 ? (
           <p className="py-4 text-center text-sm text-slate-400">Belum ada nota. Nota dibuat otomatis saat menekan Jual.</p>
@@ -298,7 +337,7 @@ export const HPPKalkulator = ({ onSold }) => {
                   <p className="truncate text-xs text-slate-400">{formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · diskon ${formatRupiah(s.diskon)}` : ""}</p>
                 </div>
                 <span className="whitespace-nowrap font-mono-num text-sm font-semibold text-emerald-600">{formatRupiah(s.total)}</span>
-                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => downloadNota(s)} data-testid={`nota-print-${s.id}`}><Download size={14} className="mr-1" />Nota</Button>
+                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => downloadNota(s, profile)} data-testid={`nota-print-${s.id}`}><Download size={14} className="mr-1" />Nota</Button>
                 <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-600" data-testid={`nota-delete-${s.id}`}><Trash2 size={16} /></button>
               </div>
             ))}
@@ -326,8 +365,10 @@ export const HPPKalkulator = ({ onSold }) => {
           {jualRow && (() => {
             const harga = parseNumber(jualRow.harga_jual);
             const qty = Math.max(1, parseInt(jualQty, 10) || 1);
-            const diskon = Math.max(0, parseNumber(jualDiskon));
             const subtotal = harga * qty;
+            const diskon = jualDiskonMode === "persen"
+              ? Math.round(subtotal * (parseNumber(jualDiskon) / 100))
+              : Math.max(0, parseNumber(jualDiskon));
             const total = Math.max(0, subtotal - diskon);
             return (
               <div className="space-y-4 py-2">
@@ -347,12 +388,18 @@ export const HPPKalkulator = ({ onSold }) => {
                     <Input value={jualPembeli} onChange={(e) => setJualPembeli(e.target.value)} placeholder="cth: Toko Bu Ani" data-testid="jual-pembeli-input" />
                   </div>
                   <div>
-                    <Label>Diskon (Rp, opsional)</Label>
-                    <Input inputMode="numeric" value={jualDiskon} onChange={(e) => setJualDiskon(formatNumberInput(e.target.value))} data-testid="jual-diskon-input" />
+                    <div className="flex items-center justify-between">
+                      <Label>Diskon (opsional)</Label>
+                      <div className="flex overflow-hidden rounded-md border text-xs">
+                        <button type="button" onClick={() => setJualDiskonMode("rp")} className={`px-2 py-0.5 ${jualDiskonMode === "rp" ? "bg-indigo-600 text-white" : "text-slate-500"}`} data-testid="diskon-mode-rp">Rp</button>
+                        <button type="button" onClick={() => setJualDiskonMode("persen")} className={`px-2 py-0.5 ${jualDiskonMode === "persen" ? "bg-indigo-600 text-white" : "text-slate-500"}`} data-testid="diskon-mode-persen">%</button>
+                      </div>
+                    </div>
+                    <Input inputMode="numeric" value={jualDiskon} onChange={(e) => setJualDiskon(jualDiskonMode === "persen" ? e.target.value.replace(/[^0-9.]/g, "") : formatNumberInput(e.target.value))} data-testid="jual-diskon-input" />
                   </div>
                 </div>
                 {diskon > 0 && (
-                  <p className="px-1 text-xs text-slate-500" data-testid="jual-diskon-info">Subtotal {formatRupiah(subtotal)} − Diskon {formatRupiah(diskon)}</p>
+                  <p className="px-1 text-xs text-slate-500" data-testid="jual-diskon-info">Subtotal {formatRupiah(subtotal)} − Diskon {formatRupiah(diskon)}{jualDiskonMode === "persen" ? ` (${parseNumber(jualDiskon)}%)` : ""}</p>
                 )}
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
                   <span className="text-sm font-semibold text-emerald-700">Total Pemasukan</span>
@@ -382,6 +429,23 @@ export const HPPKalkulator = ({ onSold }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={salinOpen} onOpenChange={setSalinOpen}>
+        <DialogContent className="max-w-sm" data-testid="salin-margin-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">Samakan Margin — {salinKategori}</DialogTitle>
+            <DialogDescription>Harga jual semua produk di kategori ini dihitung ulang dari HPP agar marginnya sama. Produk tanpa HPP dilewati.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label>Target Margin (%)</Label>
+            <Input type="number" min="0" max="99" value={salinMargin} onChange={(e) => setSalinMargin(e.target.value)} data-testid="salin-margin-input" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSalinOpen(false)}>Batal</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={applySalin} data-testid="apply-salin-btn">Terapkan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!notaDel} onOpenChange={(o) => !o && setNotaDel(null)}>
         <AlertDialogContent>

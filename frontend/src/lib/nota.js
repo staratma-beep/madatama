@@ -1,7 +1,11 @@
 import { formatRupiah, formatTanggal } from "./format";
 
-export function buildNotaHTML(sale) {
+export function buildNotaHTML(sale, profile = {}) {
   const tgl = formatTanggal(sale.tanggal);
+  const bn = profile.nama_usaha || "Bukuku Pro";
+  const ba = profile.alamat || "";
+  const bt = profile.telepon || "";
+  const bl = profile.logo || "";
   return `<!doctype html>
 <html lang="id"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,9 +14,10 @@ export function buildNotaHTML(sale) {
   * { box-sizing: border-box; }
   body { font-family: 'Segoe UI', Roboto, sans-serif; background:#f1f5f9; margin:0; padding:24px; color:#0f172a; }
   .nota { max-width:420px; margin:0 auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.08); }
-  .head { background:linear-gradient(135deg,#4f46e5,#3730a3); color:#fff; padding:22px 24px; }
+  .head { background:linear-gradient(135deg,#4f46e5,#3730a3); color:#fff; padding:22px 24px; display:flex; gap:12px; align-items:center; }
+  .head .logo { height:52px; width:52px; object-fit:contain; background:#fff; border-radius:10px; padding:5px; flex:none; }
   .head h1 { margin:0; font-size:20px; }
-  .head p { margin:2px 0 0; font-size:12px; opacity:.85; }
+  .head p { margin:2px 0 0; font-size:12px; opacity:.9; }
   .meta { padding:16px 24px; font-size:13px; color:#475569; border-bottom:1px dashed #e2e8f0; }
   .meta div { display:flex; justify-content:space-between; margin:3px 0; }
   .meta b { color:#0f172a; }
@@ -31,8 +36,12 @@ export function buildNotaHTML(sale) {
 <body>
   <div class="nota">
     <div class="head">
-      <h1>Bukuku Pro</h1>
-      <p>Percetakan • Branding • Advertising</p>
+      ${bl ? `<img src="${bl}" class="logo" alt="logo"/>` : ``}
+      <div>
+        <h1>${bn}</h1>
+        <p>${ba || "Percetakan • Branding • Advertising"}</p>
+        ${bt ? `<p>${bt}</p>` : ``}
+      </div>
     </div>
     <div class="meta">
       <div><span>No. Nota</span><b>${sale.nota_no}</b></div>
@@ -56,8 +65,8 @@ export function buildNotaHTML(sale) {
 </body></html>`;
 }
 
-export function downloadNota(sale) {
-  const blob = new Blob([buildNotaHTML(sale)], { type: "text/html;charset=utf-8" });
+export function downloadNota(sale, profile = {}) {
+  const blob = new Blob([buildNotaHTML(sale, profile)], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
