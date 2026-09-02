@@ -126,7 +126,7 @@ function App() {
             />
           </TabsContent>
           <TabsContent value="hpp" className="mt-4">
-            <HPPKalkulator onSold={reload} />
+            <HPPKalkulator onSold={reload} cashBalance={cashBalance} />
           </TabsContent>
           <TabsContent value="rekap" className="mt-4">
             <RekapBulanan transactions={transactions} />
