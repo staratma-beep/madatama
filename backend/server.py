@@ -131,6 +131,7 @@ class Product(BaseModel):
     jasa_mitra: float = 0
     tambahan: float = 0
     harga_jual: float = 0
+    stok: int = 0
     urutan: int = 0
 
 
@@ -142,6 +143,7 @@ class ProductCreate(BaseModel):
     jasa_mitra: float = 0
     tambahan: float = 0
     harga_jual: float = 0
+    stok: int = 0
 
 
 _SALE_JENIS = {"Branding": "Penjualan Branding", "Printing": "Penjualan Printing", "Advertising": "Penjualan Advertising"}
@@ -431,6 +433,8 @@ async def create_sale(input: SaleCreate):
         transaction_id=txn.id,
     )
     await db.sales.insert_one(sale.model_dump())
+    if input.product_id:
+        await db.products.update_one({"id": input.product_id}, {"$inc": {"stok": -qty}})
     return sale
 
 

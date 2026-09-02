@@ -3,6 +3,7 @@ import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, month
 import { api } from "../lib/api";
 import { downloadNota } from "../lib/nota";
 import { exportSalesCSV } from "../lib/salesExport";
+import { downloadReport } from "../lib/salesReport";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -18,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -38,6 +39,7 @@ const toPayload = (r) => ({
   jasa_mitra: parseNumber(r.jasa_mitra),
   tambahan: parseNumber(r.tambahan),
   harga_jual: parseNumber(r.harga_jual),
+  stok: parseInt(r.stok, 10) || 0,
 });
 
 const NumCell = ({ value, onChange, onBlur, testId }) => (
@@ -67,6 +69,8 @@ export const HPPKalkulator = ({ onSold }) => {
   const [salinOpen, setSalinOpen] = useState(false);
   const [salinKategori, setSalinKategori] = useState("Branding");
   const [salinMargin, setSalinMargin] = useState("30");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportMonth, setReportMonth] = useState("");
 
   const refresh = useCallback(async () => {
     const [p, s, st] = await Promise.all([api.getProducts(), api.getSales(), api.getSettings()]);
@@ -162,6 +166,7 @@ export const HPPKalkulator = ({ onSold }) => {
   };
 
   const curMonth = monthKey(todayISO());
+  const saleMonths = Array.from(new Set(sales.map((s) => (s.tanggal || "").slice(0, 7)))).filter(Boolean).sort((a, b) => (a < b ? 1 : -1));
   const monthSales = sales.filter((s) => monthKey(s.tanggal) === curMonth);
   const agg = {};
   monthSales.forEach((s) => {
@@ -193,6 +198,7 @@ export const HPPKalkulator = ({ onSold }) => {
               <tr>
                 <th className="px-3 py-3 min-w-[160px]">Nama Produk</th>
                 <th className="px-3 py-3">Jenis</th>
+                <th className="px-3 py-3 text-right">Stok</th>
                 <th className="px-3 py-3 text-right">Bahan Baku</th>
                 <th className="px-3 py-3 text-right">Jasa Mitra</th>
                 <th className="px-3 py-3 text-right">Tambahan</th>
@@ -224,6 +230,9 @@ export const HPPKalkulator = ({ onSold }) => {
                         </SelectContent>
                       </Select>
                     </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)} className={`h-9 w-20 text-right font-mono-num ${(parseInt(r.stok, 10) || 0) <= 0 ? "text-red-600" : "text-slate-700"}`} data-testid={`hpp-stok-${r.id}`} />
+                    </td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.bahan_baku} onChange={(v) => setField(r.id, "bahan_baku", v)} onBlur={() => persist(r.id)} testId={`hpp-bahan-${r.id}`} /></td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.jasa_mitra} onChange={(v) => setField(r.id, "jasa_mitra", v)} onBlur={() => persist(r.id)} testId={`hpp-jasa-${r.id}`} /></td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.tambahan} onChange={(v) => setField(r.id, "tambahan", v)} onBlur={() => persist(r.id)} testId={`hpp-tambahan-${r.id}`} /></td>
@@ -243,12 +252,12 @@ export const HPPKalkulator = ({ onSold }) => {
                 );
               })}
               {items.length === 0 && (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-slate-400">Belum ada produk</td></tr>
+                <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">Belum ada produk</td></tr>
               )}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-slate-200 bg-slate-50">
-                <td colSpan={8} className="px-3 py-3 text-right text-sm font-semibold text-slate-600">Rata-rata Margin {kategori}</td>
+                <td colSpan={9} className="px-3 py-3 text-right text-sm font-semibold text-slate-600">Rata-rata Margin {kategori}</td>
                 <td className="px-3 py-3 text-right font-mono-num font-bold text-indigo-600" data-testid={`hpp-avg-margin-${kategori}`}>{avgMargin.toFixed(1)}%</td>
                 <td></td>
               </tr>
@@ -320,9 +329,14 @@ export const HPPKalkulator = ({ onSold }) => {
           <ReceiptText size={18} className="text-indigo-500" />
           <h3 className="font-heading text-base font-bold text-slate-900">Riwayat Nota Penjualan</h3>
           {sales.length > 0 && (
-            <Button variant="outline" size="sm" className="ml-auto h-8 gap-1" onClick={() => exportSalesCSV(sales)} data-testid="export-sales-btn">
-              <Download size={14} /> Export CSV
-            </Button>
+            <div className="ml-auto flex gap-2">
+              <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => { setReportMonth(saleMonths[0] || curMonth); setReportOpen(true); }} data-testid="report-pdf-btn">
+                <FileText size={14} /> Rekap PDF
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => exportSalesCSV(sales)} data-testid="export-sales-btn">
+                <Download size={14} /> Export CSV
+              </Button>
+            </div>
           )}
           <span className="text-xs text-slate-400">{sales.length} nota</span>
         </div>
@@ -429,6 +443,28 @@ export const HPPKalkulator = ({ onSold }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="max-w-sm" data-testid="report-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">Rekap Penjualan PDF</DialogTitle>
+            <DialogDescription>Pilih bulan, lalu unduh. Buka file & pilih Cetak/Simpan sebagai PDF.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label>Bulan</Label>
+            <Select value={reportMonth} onValueChange={setReportMonth}>
+              <SelectTrigger data-testid="report-month-select"><SelectValue placeholder="Pilih bulan" /></SelectTrigger>
+              <SelectContent>
+                {saleMonths.map((m) => <SelectItem key={m} value={m}>{monthLabel(m)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportOpen(false)}>Batal</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => { downloadReport(sales, profile, reportMonth); setReportOpen(false); }} data-testid="download-report-btn">Unduh Rekap</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={salinOpen} onOpenChange={setSalinOpen}>
         <DialogContent className="max-w-sm" data-testid="salin-margin-dialog">

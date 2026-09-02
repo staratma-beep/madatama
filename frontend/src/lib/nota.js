@@ -57,7 +57,7 @@ export function buildNotaHTML(sale, profile = {}) {
         </tbody>
       </table>
     </div>
-    ${sale.diskon ? `<div class="meta" style="border-top:1px dashed #e2e8f0"><div><span>Subtotal</span><b>${formatRupiah(sale.harga_satuan * sale.qty)}</b></div><div><span>Diskon</span><b>- ${formatRupiah(sale.diskon)}</b></div></div>` : ``}
+    ${sale.diskon ? `<div class="meta" style="border-top:1px dashed #e2e8f0"><div><span>Subtotal</span><b>${formatRupiah(sale.harga_satuan * sale.qty)}</b></div><div><span>Diskon${sale.harga_satuan * sale.qty > 0 ? ` (${Math.round((sale.diskon / (sale.harga_satuan * sale.qty)) * 1000) / 10}%)` : ``}</span><b>- ${formatRupiah(sale.diskon)}</b></div></div>` : ``}
     <div class="total"><span>Total</span><b>${formatRupiah(sale.total)}</b></div>
     <div class="foot">Terima kasih atas kepercayaan Anda 🙏</div>
   </div>
