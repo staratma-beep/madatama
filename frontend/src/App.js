@@ -10,6 +10,7 @@ import { LabaRugi } from "@/components/LabaRugi";
 import { PiutangUtang } from "@/components/PiutangUtang";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { Toolbar } from "@/components/Toolbar";
+import { FixedCostsBar } from "@/components/FixedCostsBar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toaster, toast } from "sonner";
 import { Printer, BookText, CalendarRange, PieChart, HandCoins, Plus } from "lucide-react";
@@ -18,16 +19,17 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [records, setRecords] = useState([]);
   const [profitShares, setProfitShares] = useState([]);
+  const [fixedCosts, setFixedCosts] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
   const [tab, setTab] = useState("kas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const reload = useCallback(async () => {
-    const [t, r, p, s] = await Promise.all([
-      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(),
+    const [t, r, p, s, fc] = await Promise.all([
+      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(),
     ]);
-    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0);
+    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -89,9 +91,7 @@ function App() {
           piutang={totalPiutang} utang={totalUtang}
         />
 
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500 sm:text-sm">
-          <span className="font-semibold text-slate-700">Biaya Tetap Bulanan:</span> KUR Rp1.600.000 · Internet Rp400.000 · Listrik Rp400.000 · Operasional Rp750.000 · <span className="font-semibold text-indigo-600">Total Rp3.150.000</span>
-        </div>
+        <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-slate-100 p-1 sm:grid-cols-4" data-testid="main-tabs">

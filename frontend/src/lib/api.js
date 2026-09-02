@@ -25,6 +25,11 @@ export const api = {
   getSettings: () => http.get("/settings").then((r) => r.data),
   updateSettings: (d) => http.put("/settings", d).then((r) => r.data),
 
+  getFixedCosts: () => http.get("/fixed-costs").then((r) => r.data),
+  createFixedCost: (d) => http.post("/fixed-costs", d).then((r) => r.data),
+  updateFixedCost: (id, d) => http.put(`/fixed-costs/${id}`, d).then((r) => r.data),
+  deleteFixedCost: (id) => http.delete(`/fixed-costs/${id}`).then((r) => r.data),
+
   backup: () => http.get("/backup").then((r) => r.data),
   restore: (d) => http.post("/restore", d).then((r) => r.data),
   importTransactions: (items) => http.post("/import-transactions", items).then((r) => r.data),

@@ -92,10 +92,30 @@ class Settings(BaseModel):
     saldo_awal: float = 0
 
 
+DEFAULT_FIXED_COSTS = [
+    {"nama": "KUR", "nominal": 1600000},
+    {"nama": "Internet", "nominal": 400000},
+    {"nama": "Listrik", "nominal": 400000},
+    {"nama": "Operasional", "nominal": 750000},
+]
+
+
+class FixedCost(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    nama: str
+    nominal: float
+
+
+class FixedCostCreate(BaseModel):
+    nama: str
+    nominal: float
+
+
 class BackupData(BaseModel):
     transactions: List[dict] = []
     records: List[dict] = []
     profit_shares: List[dict] = []
+    fixed_costs: List[dict] = []
     settings: dict = {}
 
 
@@ -229,6 +249,40 @@ async def delete_profit_share(bulan: str):
     return {"ok": True}
 
 
+# ---------------- Fixed Costs (Biaya Tetap) ----------------
+@api_router.get("/fixed-costs", response_model=List[FixedCost])
+async def get_fixed_costs():
+    docs = await db.fixed_costs.find({}, {"_id": 0}).to_list(1000)
+    if not docs:
+        objs = [FixedCost(**c).model_dump() for c in DEFAULT_FIXED_COSTS]
+        await db.fixed_costs.insert_many(objs)
+        docs = objs
+    return docs
+
+
+@api_router.post("/fixed-costs", response_model=FixedCost)
+async def create_fixed_cost(input: FixedCostCreate):
+    obj = FixedCost(**input.model_dump())
+    await db.fixed_costs.insert_one(obj.model_dump())
+    return obj
+
+
+@api_router.put("/fixed-costs/{fid}", response_model=FixedCost)
+async def update_fixed_cost(fid: str, input: FixedCostCreate):
+    existing = await db.fixed_costs.find_one({"id": fid}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Biaya tidak ditemukan")
+    updated = {**existing, **input.model_dump()}
+    await db.fixed_costs.replace_one({"id": fid}, updated)
+    return updated
+
+
+@api_router.delete("/fixed-costs/{fid}")
+async def delete_fixed_cost(fid: str):
+    await db.fixed_costs.delete_one({"id": fid})
+    return {"ok": True}
+
+
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)
 async def get_settings():
@@ -254,11 +308,13 @@ async def backup():
     transactions = await db.transactions.find({}, {"_id": 0}).to_list(10000)
     records = await db.records.find({}, {"_id": 0}).to_list(10000)
     profit_shares = await db.profit_shares.find({}, {"_id": 0}).to_list(10000)
+    fixed_costs = await db.fixed_costs.find({}, {"_id": 0}).to_list(1000)
     settings = await db.settings.find_one({"key": "main"}, {"_id": 0}) or {}
     return BackupData(
         transactions=transactions,
         records=records,
         profit_shares=profit_shares,
+        fixed_costs=fixed_costs,
         settings=settings,
     )
 
@@ -268,6 +324,7 @@ async def restore(data: BackupData):
     await db.transactions.delete_many({})
     await db.records.delete_many({})
     await db.profit_shares.delete_many({})
+    await db.fixed_costs.delete_many({})
     await db.settings.delete_many({})
     if data.transactions:
         await db.transactions.insert_many(data.transactions)
@@ -275,6 +332,8 @@ async def restore(data: BackupData):
         await db.records.insert_many(data.records)
     if data.profit_shares:
         await db.profit_shares.insert_many(data.profit_shares)
+    if data.fixed_costs:
+        await db.fixed_costs.insert_many(data.fixed_costs)
     if data.settings:
         s = data.settings
         s["key"] = "main"
