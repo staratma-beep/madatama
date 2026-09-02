@@ -441,8 +441,11 @@ async def create_sale(input: SaleCreate):
 @api_router.delete("/sales/{sid}")
 async def delete_sale(sid: str):
     sale = await db.sales.find_one({"id": sid}, {"_id": 0})
-    if sale and sale.get("transaction_id"):
-        await db.transactions.delete_one({"id": sale["transaction_id"]})
+    if sale:
+        if sale.get("transaction_id"):
+            await db.transactions.delete_one({"id": sale["transaction_id"]})
+        if sale.get("product_id"):
+            await db.products.update_one({"id": sale["product_id"]}, {"$inc": {"stok": sale.get("qty", 0)}})
     await db.sales.delete_one({"id": sid})
     return {"ok": True}
 

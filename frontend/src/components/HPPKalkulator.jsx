@@ -126,6 +126,7 @@ export const HPPKalkulator = ({ onSold }) => {
     setRows((rs) => rs.map((x) => (x.id === nr.id ? nr : x)));
     await api.updateProduct(nr.id, toPayload(nr));
     setStokAddOpen(false);
+    await refresh();
     onSold && onSold();
     toast.success(`Stok ${stokRow.nama} +${add} → ${current + add}`);
   };
@@ -155,8 +156,8 @@ export const HPPKalkulator = ({ onSold }) => {
     });
     toast.success(`${jualRow.nama} ×${qty} dicatat ${formatRupiah(sale.total)}`);
     if (cetak) downloadNota(sale, profile);
-    setSales((s) => [...s, sale]);
     setJualOpen(false);
+    await refresh();
     onSold && onSold();
   };
 

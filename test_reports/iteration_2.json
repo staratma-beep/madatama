@@ -1,0 +1,22 @@
+{
+  "summary": "Tested bug fix: stok tidak berkurang saat dijual. Backend + Frontend both work correctly. UI updates stock without manual reload after Jual/Tambah Stok. Delete nota restores stock. Low-stock banner shows correctly. All 3 backend pytest cases and 4 frontend UI checks passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_stok_flow.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py create_sale uses count_documents+1 as nota sequence — race condition possible on concurrent sales, could produce duplicate nota_no. Consider atomic counter/collection.",
+    "create_sale $inc stok can push stock negative — no validation to reject sale when qty > available stok. Consider guardrail.",
+    "delete_sale silently returns 200 even when sid not found; no 404."
+  ],
+  "updated_files": ["/app/backend/tests/test_stok_flow.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created TEST_UIStok & TEST_LowStok products during test; both cleaned up. Sales created were deleted (via UI + API). No residual test data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug 'stok tidak berkurang saat dijual' verified fixed. Fix: confirmJual() and confirmTambahStok() in HPPKalkulator.jsx call await refresh() which reloads products from backend, refreshing UI stok values. Backend was already correct (POST /api/sales $inc stok -qty; DELETE /api/sales $inc stok +qty).",
+  "rca of the issue": "RCA: Backend already decremented stok correctly on POST /api/sales. UI (HPPKalkulator) was displaying stale local rows state after createSale, never refetching. Fix: await refresh() after createSale/updateProduct so table's Stok inputs reflect DB. Confirmed by e2e Playwright: created product stok=10, sold qty=3 → UI shows 7 without manual reload; +5 via Tambah Stok → 12; delete nota (via API) → restored to 15."
+}
