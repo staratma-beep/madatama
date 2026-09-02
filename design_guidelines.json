@@ -1,0 +1,88 @@
+{
+  "project_title": "Pencatatan Keuangan Percetakan & Branding (Bukuku Pro)",
+  "app_type": "dashboard / saas_app",
+  "theme_strategy": {
+    "default_mode": "light",
+    "style_archetype": "Modern Colorful & Clean Professional (Swiss-Tech Fusion)",
+    "description": "High contrast financial app designed for high clarity and fast mobile transaction logging in printing and branding SMBs in Indonesia."
+  },
+  "colors": {
+    "brand_primary": {
+      "main": "#0F172A",
+      "accent": "#4F46E5",
+      "gradient": "bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900"
+    },
+    "income_green": {
+      "main": "#10B981",
+      "bg_light": "#ECFDF5",
+      "border": "#A7F3D0",
+      "badge_text": "#047857"
+    },
+    "expense_red": {
+      "main": "#EF4444",
+      "bg_light": "#FEF2F2",
+      "border": "#FECACA",
+      "badge_text": "#B91C1C"
+    },
+    "neutrals": {
+      "background_light": "#F8FAFC",
+      "card_surface": "#FFFFFF",
+      "border": "#E2E8F0",
+      "text_primary": "#0F172A",
+      "text_secondary": "#64748B",
+      "text_muted": "#94A3B8"
+    },
+    "fixed_costs_accent": {
+      "kur": "#8B5CF6",
+      "internet_electricity": "#0284C7",
+      "operational": "#F59E0B"
+    }
+  },
+  "typography": {
+    "font_family_heading": "Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "font_rules": {
+      "h1": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900",
+      "h2": "text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900",
+      "h3": "text-lg sm:text-xl font-semibold text-slate-800",
+      "card_title": "text-sm sm:text-base font-semibold text-slate-700 uppercase tracking-wider",
+      "body": "text-sm sm:text-base text-slate-600 leading-relaxed",
+      "currency_large": "font-mono font-bold text-2xl sm:text-3xl tracking-tight text-slate-900",
+      "currency_medium": "font-mono font-bold text-lg sm:text-xl text-slate-900"
+    }
+  },
+  "layout_and_spacing": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6",
+    "mobile_fab_cta": "fixed bottom-5 right-5 z-50 shadow-2xl rounded-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 flex items-center gap-2 transition-all transform hover:scale-105 active:scale-95 md:hidden",
+    "card_padding": "p-5 sm:p-6",
+    "table_style": "w-full text-left text-sm border-collapse"
+  },
+  "key_components": {
+    "fixed_costs_banner": {
+      "summary": "Biaya Tetap Bulanan: KUR Rp1.600.000 + Internet Rp400.000 + Listrik Rp400.000 + Operasional Rp750.000 (Total Rp3.150.000)",
+      "badge_style": "px-2.5 py-1 text-xs font-semibold rounded-md border"
+    },
+    "quick_add_transaction_modal": "Shadcn Dialog component customized for quick mobile touch entry with predefined printing expense categories (Bahan Baku, Cetak Outdoor/Indoor, Offset, Konveksi, Operasional, KUR, Internet/Listrik)",
+    "receivables_payables_cards": "Visual distinction between Piutang (Receivables - Emerald/Teal tint) & Utang (Payables - Rose/Amber tint) with one-click 'Tandai Lunas' action button",
+    "profit_loss_sharing_breakdown": "50% Pemilik : 50% Pengelola distribution with Rp0 protection fallback when month is net loss, plus 'Tandai Sudah Dibagi' status toggle"
+  },
+  "image_urls": {
+    "printing_hero_banner": "https://images.pexels.com/photos/6620976/pexels-photo-6620976.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "printing_workshop": "https://images.pexels.com/photos/4140941/pexels-photo-4140941.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "instructions_to_main_agent": [
+    "Ensure all currency outputs are consistently formatted as 'Rp1.500.000' (Indonesian dot separator).",
+    "Implement 4 clear tab views: 1) Buku Kas Harian, 2) Rekap Bulanan, 3) Laba Rugi & Bagi Hasil, 4) Piutang & Utang.",
+    "Dashboard summary header must display live cards: Saldo Kas Saat Ini, Laba Bulan Berjalan, Total Piutang Belum Lunas, and Total Utang Belum Lunas.",
+    "Maintain mobile responsiveness with floating bottom quick action button for fast daily transaction entry.",
+    "Support CSV Export/Import and JSON Backup/Restore for offline data portability.",
+    "Always apply data-testid attributes (e.g., data-testid='add-transaction-btn', data-testid='kas-table', data-testid='profit-share-card') to interactive and key display elements."
+  ],
+  "accessibility_and_testing": {
+    "data_testid_convention": "kebab-case, role-based",
+    "contrast_ratio": "APCA AA standard verified. Green badges use dark green text (#047857) over light green bg (#ECFDF5). Red badges use dark red text (#B91C1C) over light red bg (#FEF2F2).",
+    "touch_targets": "Minimum 44px x 44px for touch elements on mobile screens"
+  }
+}
