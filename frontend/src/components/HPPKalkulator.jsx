@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -71,6 +71,9 @@ export const HPPKalkulator = ({ onSold }) => {
   const [salinMargin, setSalinMargin] = useState("30");
   const [reportOpen, setReportOpen] = useState(false);
   const [reportMonth, setReportMonth] = useState("");
+  const [stokAddOpen, setStokAddOpen] = useState(false);
+  const [stokRow, setStokRow] = useState(null);
+  const [stokAddQty, setStokAddQty] = useState("");
 
   const refresh = useCallback(async () => {
     const [p, s, st] = await Promise.all([api.getProducts(), api.getSales(), api.getSettings()]);
@@ -106,6 +109,25 @@ export const HPPKalkulator = ({ onSold }) => {
     setRows((rs) => rs.filter((r) => r.id !== id));
     setToDelete(null);
     toast.success("Produk dihapus");
+  };
+
+  const openTambahStok = (r) => {
+    setStokRow(r);
+    setStokAddQty("");
+    setStokAddOpen(true);
+  };
+
+  const confirmTambahStok = async () => {
+    if (!stokRow) return;
+    const add = parseInt(stokAddQty, 10) || 0;
+    if (add <= 0) { toast.error("Masukkan jumlah > 0"); return; }
+    const current = parseInt(stokRow.stok, 10) || 0;
+    const nr = { ...stokRow, stok: current + add };
+    setRows((rs) => rs.map((x) => (x.id === nr.id ? nr : x)));
+    await api.updateProduct(nr.id, toPayload(nr));
+    setStokAddOpen(false);
+    onSold && onSold();
+    toast.success(`Stok ${stokRow.nama} +${add} → ${current + add}`);
   };
 
   const openJual = (r) => {
@@ -230,8 +252,13 @@ export const HPPKalkulator = ({ onSold }) => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-3 py-2 text-right">
-                      <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)} className={`h-9 w-20 text-right font-mono-num ${(parseInt(r.stok, 10) || 0) <= 0 ? "text-red-600" : "text-slate-700"}`} data-testid={`hpp-stok-${r.id}`} />
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-1">
+                        <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)} className={`h-9 w-16 text-right font-mono-num ${(parseInt(r.stok, 10) || 0) <= 0 ? "text-red-600" : "text-slate-700"}`} data-testid={`hpp-stok-${r.id}`} />
+                        <button type="button" onClick={() => openTambahStok(r)} className="grid h-7 w-7 flex-none place-items-center rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Tambah stok" data-testid={`hpp-tambah-stok-${r.id}`}>
+                          <PackagePlus size={15} />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.bahan_baku} onChange={(v) => setField(r.id, "bahan_baku", v)} onBlur={() => persist(r.id)} testId={`hpp-bahan-${r.id}`} /></td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.jasa_mitra} onChange={(v) => setField(r.id, "jasa_mitra", v)} onBlur={() => persist(r.id)} testId={`hpp-jasa-${r.id}`} /></td>
@@ -443,6 +470,24 @@ export const HPPKalkulator = ({ onSold }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={stokAddOpen} onOpenChange={setStokAddOpen}>
+        <DialogContent className="max-w-sm" data-testid="tambah-stok-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">Tambah Stok — {stokRow?.nama}</DialogTitle>
+            <DialogDescription>Stok saat ini: {parseInt(stokRow?.stok, 10) || 0}. Masukkan jumlah barang yang baru datang.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label>Jumlah Ditambah</Label>
+            <Input type="number" min="1" value={stokAddQty} onChange={(e) => setStokAddQty(e.target.value)} placeholder="0" data-testid="tambah-stok-input" />
+            {(parseInt(stokAddQty, 10) || 0) > 0 && <p className="mt-2 text-xs text-slate-500">Stok baru: {(parseInt(stokRow?.stok, 10) || 0) + (parseInt(stokAddQty, 10) || 0)}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStokAddOpen(false)}>Batal</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={confirmTambahStok} data-testid="confirm-tambah-stok-btn">Tambah</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="max-w-sm" data-testid="report-dialog">

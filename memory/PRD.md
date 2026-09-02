@@ -34,6 +34,8 @@ Pemilik/pengelola usaha percetakan kecil yang sering input transaksi lewat HP.
 ## Next Tasks
 - Tunggu feedback user.
 
+## Update Log 2
+
 ## Update Log
 - 2026-06: Biaya Tetap Bulanan kini CRUD (collection fixed_costs, endpoint /api/fixed-costs) + tombol "Catat ke Kas" untuk posting biaya tetap jadi transaksi Pengeluaran sekali klik.
 - 2026-06: Form Tambah Transaksi auto-fill Nominal & Keterangan saat memilih Jenis yang cocok dengan biaya tetap (KUR/Internet/Listrik/Operasional).

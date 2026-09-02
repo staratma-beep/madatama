@@ -14,7 +14,7 @@ import { Toolbar } from "@/components/Toolbar";
 import { FixedCostsBar } from "@/components/FixedCostsBar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Toaster, toast } from "sonner";
-import { Printer, BookText, CalendarRange, PieChart, HandCoins, Plus, Calculator } from "lucide-react";
+import { Printer, BookText, CalendarRange, PieChart, HandCoins, Plus, Calculator, AlertTriangle } from "lucide-react";
 
 function App() {
   const [transactions, setTransactions] = useState([]);
@@ -22,16 +22,17 @@ function App() {
   const [profitShares, setProfitShares] = useState([]);
   const [fixedCosts, setFixedCosts] = useState([]);
   const [sales, setSales] = useState([]);
+  const [products, setProducts] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
   const [tab, setTab] = useState("kas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const reload = useCallback(async () => {
-    const [t, r, p, s, fc, sl] = await Promise.all([
-      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(),
+    const [t, r, p, s, fc, sl, pr] = await Promise.all([
+      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(), api.getProducts(),
     ]);
-    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc); setSales(sl);
+    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc); setSales(sl); setProducts(pr);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -42,6 +43,7 @@ function App() {
   const totalPiutang = useMemo(() => records.filter((r) => r.jenis === "Piutang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const totalUtang = useMemo(() => records.filter((r) => r.jenis === "Utang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const labaProduk = useMemo(() => sales.filter((s) => monthKey(s.tanggal) === curMonth).reduce((a, s) => a + (s.laba || 0), 0), [sales, curMonth]);
+  const lowStock = useMemo(() => products.filter((p) => (p.harga_jual || 0) > 0 && (p.stok ?? 0) <= 5).sort((a, b) => (a.stok || 0) - (b.stok || 0)), [products]);
 
   const handleAdd = () => { setEditing(null); setDialogOpen(true); };
   const handleEdit = (t) => { setEditing(t); setDialogOpen(true); };
@@ -94,6 +96,17 @@ function App() {
           cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
           piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
         />
+
+        {lowStock.length > 0 && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3" data-testid="low-stock-alert">
+            <AlertTriangle size={18} className="mt-0.5 flex-none text-amber-600" />
+            <div className="text-sm text-amber-800">
+              <span className="font-semibold">Stok menipis ({lowStock.length} produk):</span>{" "}
+              {lowStock.slice(0, 8).map((p) => `${p.nama} (${p.stok ?? 0})`).join(", ")}{lowStock.length > 8 ? ", …" : ""}
+              <span className="text-amber-600"> — segera restok di tab Kalkulator HPP.</span>
+            </div>
+          </div>
+        )}
 
         <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
 
