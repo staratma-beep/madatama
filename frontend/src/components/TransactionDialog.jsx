@@ -21,7 +21,7 @@ const empty = {
   keterangan_tambahan: "",
 };
 
-export const TransactionDialog = ({ open, onOpenChange, onSubmit, editing }) => {
+export const TransactionDialog = ({ open, onOpenChange, onSubmit, editing, fixedCosts = [] }) => {
   const [form, setForm] = useState(empty);
 
   useEffect(() => {
@@ -49,6 +49,20 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, editing }) => 
   const handleKategori = (val) => {
     const opts = val === "Pemasukan" ? JENIS_PEMASUKAN : JENIS_PENGELUARAN;
     setForm((f) => ({ ...f, kategori: val, jenis: opts[0] }));
+  };
+
+  const handleJenis = (val) => {
+    setForm((f) => {
+      const next = { ...f, jenis: val };
+      if (f.kategori === "Pengeluaran") {
+        const fc = fixedCosts.find((c) => c.nama === val);
+        if (fc) {
+          next.nominalStr = formatNumberInput(String(fc.nominal));
+          next.keterangan = fc.nama;
+        }
+      }
+      return next;
+    });
   };
 
   const submit = () => {
@@ -106,7 +120,7 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, editing }) => 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Jenis</Label>
-              <Select value={form.jenis} onValueChange={(v) => setForm((f) => ({ ...f, jenis: v }))}>
+              <Select value={form.jenis} onValueChange={handleJenis}>
                 <SelectTrigger data-testid="select-jenis"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {jenisOptions.map((j) => (

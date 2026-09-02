@@ -120,7 +120,7 @@ function App() {
         </Tabs>
       </main>
 
-      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={handleSubmit} editing={editing} />
+      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={handleSubmit} editing={editing} fixedCosts={fixedCosts} />
 
       <button
         onClick={handleAdd}
