@@ -12,14 +12,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
+import { Checkbox } from "./ui/checkbox";
 import { Pencil, Trash2, Plus, Filter, X, TrendingUp, TrendingDown } from "lucide-react";
 
 const ALL_JENIS = ["Semua", ...JENIS_PEMASUKAN, ...JENIS_PENGELUARAN.filter((j) => j !== "Lain-lain")];
 
 export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cashBalance }) => {
-  const [f, setF] = useState({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua" });
+  const [f, setF] = useState({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua", search: "" });
   const [showFilter, setShowFilter] = useState(false);
   const [toDelete, setToDelete] = useState(null);
+  const [toDeleteMultiple, setToDeleteMultiple] = useState(false);
+  const [selected, setSelected] = useState([]);
 
   const withBal = useMemo(() => withRunningBalance(transactions, saldoAwal), [transactions, saldoAwal]);
 
@@ -30,16 +33,24 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
         if (f.sampai && t.tanggal > f.sampai) return false;
         if (f.kategori !== "Semua" && t.kategori !== f.kategori) return false;
         if (f.jenis !== "Semua" && t.jenis !== f.jenis) return false;
+        if (f.search) {
+          const s = f.search.toLowerCase();
+          if (!t.keterangan.toLowerCase().includes(s) && !(t.keterangan_tambahan || "").toLowerCase().includes(s)) return false;
+        }
         return true;
       })
       .reverse();
   }, [withBal, f]);
 
-  const clearFilter = () => setF({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua" });
-  const hasFilter = f.dari || f.sampai || f.kategori !== "Semua" || f.jenis !== "Semua";
+  const clearFilter = () => setF({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua", search: "" });
+  const hasFilter = f.dari || f.sampai || f.kategori !== "Semua" || f.jenis !== "Semua" || f.search;
 
   const totalMasuk = filtered.filter(t => t.kategori === "Pemasukan").reduce((a, t) => a + t.nominal, 0);
   const totalKeluar = filtered.filter(t => t.kategori === "Pengeluaran").reduce((a, t) => a + t.nominal, 0);
+
+  const handleSelectAll = (checked) => setSelected(checked ? filtered.map(t => t.id) : []);
+  const handleSelect = (id, checked) => setSelected(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
+  const isAllSelected = filtered.length > 0 && selected.length === filtered.length;
 
   return (
     <div className="space-y-4">
@@ -68,6 +79,15 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
             </div>
           </div>
           <div className="flex gap-2">
+            {selected.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => setToDeleteMultiple(true)}
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md"
+              >
+                <Trash2 size={15} className="mr-1.5" /> Hapus ({selected.length})
+              </Button>
+            )}
             <Button
               variant="secondary"
               onClick={() => setShowFilter((s) => !s)}
@@ -90,7 +110,11 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
 
       {/* Filter Panel */}
       {showFilter && (
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 sm:grid-cols-4 fade-up">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 sm:grid-cols-2 md:grid-cols-5 fade-up">
+          <div className="md:col-span-1">
+            <Label className="text-xs font-semibold text-slate-600">Pencarian</Label>
+            <Input type="text" placeholder="Cari keterangan..." value={f.search} onChange={(e) => setF({ ...f, search: e.target.value })} data-testid="filter-search" className="mt-1 border-indigo-200 focus:border-indigo-400" />
+          </div>
           <div>
             <Label className="text-xs font-semibold text-slate-600">Dari Tanggal</Label>
             <Input type="date" value={f.dari} onChange={(e) => setF({ ...f, dari: e.target.value })} data-testid="filter-dari" className="mt-1 border-indigo-200 focus:border-indigo-400" />
@@ -118,7 +142,7 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
             </Select>
           </div>
           {hasFilter && (
-            <Button variant="ghost" className="sm:col-span-4 justify-start text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={clearFilter} data-testid="clear-filter-btn">
+            <Button variant="ghost" className="sm:col-span-2 md:col-span-5 justify-start text-slate-500 hover:text-red-600 hover:bg-red-50" onClick={clearFilter} data-testid="clear-filter-btn">
               <X size={14} className="mr-1.5" /> Hapus semua filter
             </Button>
           )}
@@ -131,6 +155,9 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
           <table className="w-full text-left text-sm" data-testid="kas-table">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/80">
+                <th className="px-4 py-3.5 w-10">
+                  <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
+                </th>
                 <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Tanggal</th>
                 <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Keterangan</th>
                 <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Kategori</th>
@@ -143,7 +170,7 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-14 text-center">
+                  <td colSpan={8} className="px-4 py-14 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="grid h-12 w-12 place-items-center rounded-full bg-slate-100">
                         <Filter size={20} className="text-slate-300" />
@@ -155,7 +182,10 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
                 </tr>
               )}
               {filtered.map((t, i) => (
-                <tr key={t.id} className="group hover:bg-indigo-50/40 transition-colors" data-testid={`kas-row-${t.id}`}>
+                <tr key={t.id} className={`group transition-colors ${selected.includes(t.id) ? "bg-indigo-50/70" : "hover:bg-indigo-50/40"}`} data-testid={`kas-row-${t.id}`}>
+                  <td className="px-4 py-3.5">
+                    <Checkbox checked={selected.includes(t.id)} onCheckedChange={(c) => handleSelect(t.id, c)} />
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 font-medium">{formatTanggal(t.tanggal)}</td>
                   <td className="px-4 py-3.5 max-w-[200px]">
                     <p className="font-semibold text-slate-800 truncate">{t.keterangan}</p>
@@ -163,8 +193,8 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
                   </td>
                   <td className="px-4 py-3.5">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${t.kategori === "Pemasukan"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-red-100 text-red-700"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-red-100 text-red-700"
                       }`}>
                       {t.kategori === "Pemasukan" ? "▲" : "▼"} {t.kategori}
                     </span>
@@ -201,7 +231,7 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
             {filtered.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-indigo-100 bg-indigo-50/50">
-                  <td colSpan={4} className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600">
+                  <td colSpan={5} className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600">
                     Total ({filtered.length} transaksi)
                   </td>
                   <td className="px-4 py-3 text-right font-mono-num text-sm font-bold text-indigo-700">
@@ -230,6 +260,24 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
               onClick={() => { onDelete(toDelete.id); setToDelete(null); }}
               data-testid="confirm-delete-btn"
             >Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={toDeleteMultiple} onOpenChange={setToDeleteMultiple}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading text-lg">Hapus {selected.length} transaksi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Transaksi terpilih akan dihapus permanen secara massal. Tindakan ini tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-red-600 hover:bg-red-700"
+              onClick={() => { onDelete(selected); setToDeleteMultiple(false); setSelected([]); }}
+            >Hapus Semua Terpilih</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

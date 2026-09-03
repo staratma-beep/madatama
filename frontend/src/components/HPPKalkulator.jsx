@@ -248,16 +248,21 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                 <th className="px-3 py-3 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {items.map((r) => {
                 const hpp = parseNumber(r.bahan_baku) + parseNumber(r.jasa_mitra) + parseNumber(r.tambahan);
                 const harga = parseNumber(r.harga_jual);
                 const laba = harga - hpp;
                 const margin = harga > 0 ? (laba / harga) * 100 : 0;
+                const stokNum = parseInt(r.stok, 10) || 0;
+                const stokKritis = stokNum <= 2;
+                const stokRendah = stokNum <= 5 && stokNum > 2;
+                const marginBagus = margin >= 30;
+                const marginCukup = margin >= 15 && margin < 30;
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50" data-testid={`hpp-row-${r.id}`}>
+                  <tr key={r.id} className={`group hover:bg-indigo-50/30 transition-colors ${stokKritis ? "bg-red-50/30" : ""}`} data-testid={`hpp-row-${r.id}`}>
                     <td className="px-3 py-2">
-                      <Input value={r.nama} onChange={(e) => setField(r.id, "nama", e.target.value)} onBlur={() => persist(r.id)} className="h-9 min-w-[150px]" data-testid={`hpp-nama-${r.id}`} />
+                      <Input value={r.nama} onChange={(e) => setField(r.id, "nama", e.target.value)} onBlur={() => persist(r.id)} className="h-9 min-w-[150px] border-0 bg-transparent px-1 focus:bg-white focus:border focus:border-slate-200" data-testid={`hpp-nama-${r.id}`} />
                     </td>
                     <td className="px-3 py-2">
                       <Select value={r.jenis} onValueChange={(v) => persistNow(r.id, { jenis: v })}>
@@ -271,7 +276,16 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-1">
-                        <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)} className={`h-9 w-16 text-right font-mono-num ${(parseInt(r.stok, 10) || 0) <= 0 ? "text-red-600" : "text-slate-700"}`} data-testid={`hpp-stok-${r.id}`} />
+                        <div className="relative">
+                          <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)}
+                            className={`h-9 w-16 text-right font-mono-num font-bold ${stokKritis ? "text-red-600 border-red-300 bg-red-50" :
+                                stokRendah ? "text-amber-600 border-amber-200 bg-amber-50" :
+                                  "text-slate-700"
+                              }`}
+                            data-testid={`hpp-stok-${r.id}`}
+                          />
+                          {stokKritis && <span className="absolute -top-1.5 -right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />}
+                        </div>
                         <button type="button" onClick={() => openTambahStok(r)} className="grid h-7 w-7 flex-none place-items-center rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Tambah stok" data-testid={`hpp-tambah-stok-${r.id}`}>
                           <PackagePlus size={15} />
                         </button>
@@ -280,23 +294,31 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                     <td className="px-3 py-2 text-right"><NumCell value={r.bahan_baku} onChange={(v) => setField(r.id, "bahan_baku", v)} onBlur={() => persist(r.id)} testId={`hpp-bahan-${r.id}`} /></td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.jasa_mitra} onChange={(v) => setField(r.id, "jasa_mitra", v)} onBlur={() => persist(r.id)} testId={`hpp-jasa-${r.id}`} /></td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.tambahan} onChange={(v) => setField(r.id, "tambahan", v)} onBlur={() => persist(r.id)} testId={`hpp-tambahan-${r.id}`} /></td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold text-slate-700" data-testid={`hpp-total-${r.id}`}>{formatRupiah(hpp)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold text-slate-600" data-testid={`hpp-total-${r.id}`}>{formatRupiah(hpp)}</td>
                     <td className="px-3 py-2 text-right"><NumCell value={r.harga_jual} onChange={(v) => setField(r.id, "harga_jual", v)} onBlur={() => persist(r.id)} testId={`hpp-harga-${r.id}`} /></td>
                     <td className={`whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold ${laba >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-laba-${r.id}`}>{formatRupiah(laba)}</td>
-                    <td className={`px-3 py-2 text-right font-mono-num ${margin >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-margin-${r.id}`}>{margin.toFixed(1)}%</td>
+                    <td className="px-3 py-2 text-right" data-testid={`hpp-margin-${r.id}`}>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${harga <= 0 ? "bg-slate-100 text-slate-400" :
+                          marginBagus ? "bg-emerald-100 text-emerald-700" :
+                            marginCukup ? "bg-amber-100 text-amber-700" :
+                              "bg-red-100 text-red-600"
+                        }`}>
+                        {harga > 0 ? `${margin.toFixed(1)}%` : "—"}
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2 hover:bg-emerald-700" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
-                        <ShoppingCart size={14} className="mr-1" /> Jual
+                      <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2.5 hover:bg-emerald-700 shadow-sm" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
+                        <ShoppingCart size={13} className="mr-1" /> Jual
                       </Button>
-                      <button onClick={() => setToDelete(r)} className="text-slate-300 hover:text-red-600 align-middle" data-testid={`hpp-delete-${r.id}`}>
-                        <Trash2 size={16} />
+                      <button onClick={() => setToDelete(r)} className="text-slate-200 hover:text-red-500 align-middle transition-colors" data-testid={`hpp-delete-${r.id}`}>
+                        <Trash2 size={15} />
                       </button>
                     </td>
                   </tr>
                 );
               })}
               {items.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-8 text-center text-slate-400">Belum ada produk</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-slate-400">Belum ada produk di kategori ini. Klik "+ Tambah Produk" di bawah.</td></tr>
               )}
             </tbody>
             <tfoot>
@@ -320,13 +342,44 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     );
   };
 
+  // KPI Bulan Berjalan
+  const totalOmzet = monthSales.reduce((a, s) => a + s.total, 0);
+  const totalLabaProduk = monthSales.reduce((a, s) => a + (s.laba || 0), 0);
+  const totalQty = monthSales.reduce((a, s) => a + s.qty, 0);
+  const maxQty = topSold[0]?.qty || 1;
+  const maxLaba = topProfit[0]?.laba || 1;
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-heading text-xl font-bold text-slate-900">Kalkulator HPP Produk</h2>
-        <p className="text-sm text-slate-500">Hitung HPP, laba, & margin. Klik <span className="font-semibold text-emerald-600">Jual</span> untuk catat penjualan ke Buku Kas tanpa mengetik.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="font-heading text-xl font-bold text-slate-900">Kalkulator HPP Produk</h2>
+          <p className="text-sm text-slate-500">Hitung HPP, margin & laba. Klik <span className="font-semibold text-emerald-600">Jual</span> untuk catat penjualan ke Buku Kas secara instan.</p>
+        </div>
       </div>
 
+      {/* KPI Cards Bulan Ini */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Omzet {monthLabel(curMonth).split(" ")[0]}</p>
+          <p className="mt-2 font-mono-num text-xl font-bold">{formatRupiah(totalOmzet)}</p>
+          <p className="mt-0.5 text-xs opacity-70">{totalQty} unit terjual</p>
+        </div>
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-4 text-white shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Laba Produk</p>
+          <p className="mt-2 font-mono-num text-xl font-bold">{formatRupiah(totalLabaProduk)}</p>
+          <p className="mt-0.5 text-xs opacity-70">
+            {totalOmzet > 0 ? `Margin ${((totalLabaProduk / totalOmzet) * 100).toFixed(1)}%` : "Belum ada nota"}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-4 text-white shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Jumlah Nota</p>
+          <p className="mt-2 font-mono-num text-xl font-bold">{monthSales.length}</p>
+          <p className="mt-0.5 text-xs opacity-70">{aggList.length} produk berbeda</p>
+        </div>
+      </div>
+
+      {/* Produk Terlaris */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="produk-terlaris">
         <div className="mb-4 flex items-center gap-2">
           <Trophy size={18} className="text-amber-500" />
@@ -338,28 +391,38 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Paling Sering Dijual</p>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {topSold.map((p, i) => (
-                  <div key={p.nama} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-testid={`top-sold-${i}`}>
-                    <span className="flex items-center gap-2 text-sm">
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{i + 1}</span>
-                      <span className="font-medium text-slate-700">{p.nama}</span>
-                    </span>
-                    <span className="font-mono-num text-sm font-semibold text-slate-800">{p.qty} pcs</span>
+                  <div key={p.nama} data-testid={`top-sold-${i}`}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{i + 1}</span>
+                        <span className="font-medium text-slate-700">{p.nama}</span>
+                      </span>
+                      <span className="font-mono-num font-semibold text-slate-800">{p.qty} pcs</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-100">
+                      <div className="h-1.5 rounded-full bg-indigo-400" style={{ width: `${(p.qty / maxQty) * 100}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Paling Menguntungkan</p>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {topProfit.map((p, i) => (
-                  <div key={p.nama} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-testid={`top-profit-${i}`}>
-                    <span className="flex items-center gap-2 text-sm">
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">{i + 1}</span>
-                      <span className="font-medium text-slate-700">{p.nama}</span>
-                    </span>
-                    <span className="font-mono-num text-sm font-semibold text-emerald-600">{formatRupiah(p.laba)}</span>
+                  <div key={p.nama} data-testid={`top-profit-${i}`}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">{i + 1}</span>
+                        <span className="font-medium text-slate-700">{p.nama}</span>
+                      </span>
+                      <span className="font-mono-num font-semibold text-emerald-600">{formatRupiah(p.laba)}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-slate-100">
+                      <div className="h-1.5 rounded-full bg-emerald-400" style={{ width: `${(p.laba / maxLaba) * 100}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -368,6 +431,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
         )}
       </div>
 
+      {/* Riwayat Nota */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="riwayat-nota">
         <div className="mb-3 flex items-center gap-2">
           <ReceiptText size={18} className="text-indigo-500" />
@@ -378,35 +442,47 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                 <FileText size={14} /> Rekap PDF
               </Button>
               <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => exportSalesCSV(sales)} data-testid="export-sales-btn">
-                <Download size={14} /> Export CSV
+                <Download size={14} /> CSV
               </Button>
             </div>
           )}
-          <span className="text-xs text-slate-400">{sales.length} nota</span>
+          <span className="text-xs text-slate-400 ml-1">{sales.length} nota</span>
         </div>
         {sales.length === 0 ? (
           <p className="py-4 text-center text-sm text-slate-400">Belum ada nota. Nota dibuat otomatis saat menekan Jual.</p>
         ) : (
-          <div className="max-h-72 space-y-1.5 overflow-y-auto">
+          <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
             {[...sales].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-lg border border-slate-100 px-3 py-2" data-testid={`nota-row-${s.id}`}>
+              <div key={s.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 hover:bg-white transition-colors" data-testid={`nota-row-${s.id}`}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-800">{s.nota_no} · {s.nama} ×{s.qty}</p>
-                  <p className="truncate text-xs text-slate-400">{formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · diskon ${formatRupiah(s.diskon)}` : ""}</p>
+                  <p className="truncate text-sm font-semibold text-slate-800">{s.nota_no} · {s.nama} <span className="font-normal text-slate-500">×{s.qty}</span></p>
+                  <p className="truncate text-xs text-slate-400">
+                    {formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · -${formatRupiah(s.diskon)}` : ""}
+                  </p>
                 </div>
-                <span className="whitespace-nowrap font-mono-num text-sm font-semibold text-emerald-600">{formatRupiah(s.total)}</span>
-                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => downloadNota(s, profile)} data-testid={`nota-print-${s.id}`}><Download size={14} className="mr-1" />Nota</Button>
-                <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-600" data-testid={`nota-delete-${s.id}`}><Trash2 size={16} /></button>
+                <div className="text-right hidden sm:block">
+                  <p className="font-mono-num text-sm font-bold text-emerald-600">{formatRupiah(s.total)}</p>
+                  {(s.laba > 0) && <p className="text-xs text-slate-400 font-mono-num">laba {formatRupiah(s.laba)}</p>}
+                </div>
+                <div className="sm:hidden font-mono-num text-sm font-bold text-emerald-600">{formatRupiah(s.total)}</div>
+                <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadNota(s, profile)} data-testid={`nota-print-${s.id}`}><Download size={14} /></Button>
+                <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-500 flex-none" data-testid={`nota-delete-${s.id}`}><Trash2 size={15} /></button>
               </div>
             ))}
           </div>
         )}
       </div>
 
+      {/* Tabs Produk per Kategori */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
           {KATEGORI.map((k) => (
-            <TabsTrigger key={k} value={k} className="data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`hpp-tab-${k}`}>{k}</TabsTrigger>
+            <TabsTrigger key={k} value={k} className="data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`hpp-tab-${k}`}>
+              {k}
+              <span className="ml-1.5 hidden rounded-full bg-slate-200 px-1.5 text-[10px] font-bold text-slate-600 sm:inline">
+                {rows.filter((r) => r.kategori === k).length}
+              </span>
+            </TabsTrigger>
           ))}
         </TabsList>
         {KATEGORI.map((k) => (
@@ -415,7 +491,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
       </Tabs>
 
       <Dialog open={jualOpen} onOpenChange={setJualOpen}>
-        <DialogContent className="max-w-sm" data-testid="jual-dialog">
+        <DialogContent className="sm:max-w-md" data-testid="jual-dialog">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">Jual: {jualRow?.nama}</DialogTitle>
             <DialogDescription>Otomatis tercatat sebagai pemasukan di Buku Kas.</DialogDescription>

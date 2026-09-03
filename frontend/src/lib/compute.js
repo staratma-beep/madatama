@@ -1,7 +1,7 @@
 import { monthKey } from "./format";
 import { JENIS_PENGELUARAN } from "./api";
 
-const INTERNAL = ["Internet", "Listrik", "Operasional"];
+
 
 export function computeCashBalance(transactions, saldoAwal) {
   const delta = transactions.reduce((acc, t) => {
@@ -32,11 +32,10 @@ export function monthlyRecap(transactions) {
       map[k] = {
         bulan: k,
         pemasukan: 0,
-        bahanMitra: 0,
-        kur: 0,
-        internetListrikOps: 0,
-        lainPengeluaran: 0,
         pengeluaran: 0,
+        bahanMitra: 0,
+        biayaTetapRinci: {},
+        lainPengeluaran: 0,
       };
     }
     const row = map[k];
@@ -44,10 +43,14 @@ export function monthlyRecap(transactions) {
       row.pemasukan += t.nominal;
     } else {
       row.pengeluaran += t.nominal;
-      if (t.jenis === "Bahan/Mitra") row.bahanMitra += t.nominal;
-      else if (t.jenis === "KUR") row.kur += t.nominal;
-      else if (INTERNAL.includes(t.jenis)) row.internetListrikOps += t.nominal;
-      else row.lainPengeluaran += t.nominal;
+      if (t.keterangan_tambahan === "Biaya tetap bulanan") {
+        const n = t.keterangan || "Lain-lain";
+        row.biayaTetapRinci[n] = (row.biayaTetapRinci[n] || 0) + t.nominal;
+      } else if (t.jenis === "Bahan/Mitra") {
+        row.bahanMitra += t.nominal;
+      } else {
+        row.lainPengeluaran += t.nominal;
+      }
     }
   });
   const rows = Object.values(map).map((r) => {
@@ -63,11 +66,10 @@ export function monthDetail(transactions, bulan) {
   return rows[0] || {
     bulan,
     pemasukan: 0,
-    bahanMitra: 0,
-    kur: 0,
-    internetListrikOps: 0,
-    lainPengeluaran: 0,
     pengeluaran: 0,
+    bahanMitra: 0,
+    biayaTetapRinci: {},
+    lainPengeluaran: 0,
     laba: 0,
     margin: 0,
   };

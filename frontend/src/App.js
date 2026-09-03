@@ -56,15 +56,63 @@ function App() {
     setDialogOpen(false); setEditing(null); reload();
   };
 
-  const handleDelete = async (id) => { await api.deleteTransaction(id); toast.success("Transaksi dihapus"); reload(); };
-
+  const handleDelete = async (idOrIds) => {
+    if (Array.isArray(idOrIds)) {
+      await Promise.all(idOrIds.map(id => api.deleteTransaction(id)));
+      toast.success(`${idOrIds.length} transaksi dihapus`);
+    } else {
+      await api.deleteTransaction(idOrIds);
+      toast.success("Transaksi dihapus");
+    }
+    reload();
+  };
   const createRecord = async (d) => { await api.createRecord(d); toast.success("Catatan ditambahkan"); reload(); };
   const settleRecord = async (id) => { await api.settleRecord(id); toast.success("Ditandai lunas & tercatat di kas"); reload(); };
   const unsettleRecord = async (id) => { await api.unsettleRecord(id); toast.success("Status dikembalikan"); reload(); };
   const deleteRecord = async (id) => { await api.deleteRecord(id); toast.success("Catatan dihapus"); reload(); };
 
-  const markShared = async (d) => { await api.createProfitShare(d); toast.success("Bagi hasil dicatat"); reload(); };
-  const unmarkShared = async (bulan) => { await api.deleteProfitShare(bulan); toast.success("Dibatalkan"); reload(); };
+  const markShared = async (d) => {
+    const { bulan, laba_bersih, bagian_pemilik, bagian_pengelola } = d;
+    // Ambil tanggal akhir bulan sebagai tanggal transaksi prive
+    const [yr, mo] = bulan.split("-");
+    const lastDay = new Date(Number(yr), Number(mo), 0).getDate();
+    const tanggal = `${yr}-${mo}-${String(lastDay).padStart(2, "0")}`;
+    // Buat 2 transaksi Pengeluaran Prive otomatis di Buku Kas
+    await Promise.all([
+      api.createTransaction({
+        tanggal,
+        keterangan: `Prive Pemilik — Bagi Hasil ${bulan}`,
+        kategori: "Pengeluaran",
+        jenis: "Lain-lain",
+        nominal: bagian_pemilik,
+        keterangan_tambahan: "prive_bagi_hasil",
+      }),
+      api.createTransaction({
+        tanggal,
+        keterangan: `Prive Pengelola — Bagi Hasil ${bulan}`,
+        kategori: "Pengeluaran",
+        jenis: "Lain-lain",
+        nominal: bagian_pengelola,
+        keterangan_tambahan: "prive_bagi_hasil",
+      }),
+    ]);
+    await api.createProfitShare(d);
+    toast.success("Bagi hasil dicatat & saldo kas dipotong otomatis ✅");
+    reload();
+  };
+
+  const unmarkShared = async (bulan) => {
+    // Hapus transaksi prive yang terkait bulan ini
+    const priveKas = transactions.filter(
+      (t) => t.keterangan_tambahan === "prive_bagi_hasil" && t.keterangan?.includes(bulan)
+    );
+    await Promise.all([
+      api.deleteProfitShare(bulan),
+      ...priveKas.map((t) => api.deleteTransaction(t.id)),
+    ]);
+    toast.success("Bagi hasil dibatalkan & transaksi prive dihapus");
+    reload();
+  };
 
   const tabs = [
     { key: "kas", label: "Buku Kas", icon: BookText },
