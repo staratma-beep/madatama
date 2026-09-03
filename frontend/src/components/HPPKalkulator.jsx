@@ -223,10 +223,10 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     const withHarga = items.filter((r) => parseNumber(r.harga_jual) > 0);
     const avgMargin = withHarga.length
       ? withHarga.reduce((a, r) => {
-          const hpp = parseNumber(r.bahan_baku) + parseNumber(r.jasa_mitra) + parseNumber(r.tambahan);
-          const h = parseNumber(r.harga_jual);
-          return a + (h > 0 ? ((h - hpp) / h) * 100 : 0);
-        }, 0) / withHarga.length
+        const hpp = parseNumber(r.bahan_baku) + parseNumber(r.jasa_mitra) + parseNumber(r.tambahan);
+        const h = parseNumber(r.harga_jual);
+        return a + (h > 0 ? ((h - hpp) / h) * 100 : 0);
+      }, 0) / withHarga.length
       : 0;
 
     return (
@@ -421,29 +421,41 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
             <DialogDescription>Otomatis tercatat sebagai pemasukan di Buku Kas.</DialogDescription>
           </DialogHeader>
           {jualDone ? (
-            <div className="space-y-4 py-2" data-testid="jual-sukses">
-              <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-4">
-                <div className="grid h-10 w-10 flex-none place-items-center rounded-full bg-emerald-500 text-white"><CheckCircle2 size={22} /></div>
+            <div className="space-y-3 py-2" data-testid="jual-sukses">
+              {/* Success banner */}
+              <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "linear-gradient(135deg, #d1fae5, #a7f3d0)" }}>
+                <div className="grid h-11 w-11 flex-none place-items-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-200">
+                  <CheckCircle2 size={22} />
+                </div>
                 <div>
-                  <p className="font-semibold text-emerald-800">Tersimpan ke Buku Kas</p>
-                  <p className="text-xs text-emerald-600">Nota {jualDone.sale.nota_no} · {jualDone.sale.nama} ×{jualDone.sale.qty}</p>
+                  <p className="font-bold text-emerald-900">Tersimpan ke Buku Kas</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">Nota {jualDone.sale.nota_no} · {jualDone.sale.nama} ×{jualDone.sale.qty}</p>
                 </div>
               </div>
-              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-sm text-slate-500">Pemasukan</span>
-                  <span className="font-mono-num font-semibold text-emerald-600">+{formatRupiah(jualDone.sale.total)}</span>
+
+              {/* Stats rows — no outer border/box */}
+              <div className="space-y-2 px-1">
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-600">Pemasukan</span>
+                  <span className="font-mono-num text-base font-bold text-emerald-600">+{formatRupiah(jualDone.sale.total)}</span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="flex items-center gap-1.5 text-sm text-slate-500"><Wallet size={14} /> Saldo Kas Sekarang</span>
-                  <span className="font-mono-num font-bold text-slate-900" data-testid="jual-sukses-saldo">{formatRupiah(jualDone.saldo)}</span>
+                <div className="flex items-center justify-between rounded-xl bg-indigo-50 px-4 py-3">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                    <Wallet size={14} className="text-indigo-400" /> Saldo Kas Sekarang
+                  </span>
+                  <span className="font-mono-num text-base font-bold text-indigo-700" data-testid="jual-sukses-saldo">
+                    {formatRupiah(jualDone.saldo)}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-sm text-slate-500">Sisa Stok {jualDone.sale.nama}</span>
-                  <span className={`font-mono-num font-semibold ${jualDone.sisaStok <= 0 ? "text-red-600" : "text-slate-700"}`}>{jualDone.sisaStok}</span>
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-600">Sisa Stok {jualDone.sale.nama}</span>
+                  <span className={`font-mono-num text-base font-bold ${jualDone.sisaStok <= 0 ? "text-red-600" : "text-slate-700"}`}>
+                    {jualDone.sisaStok} pcs
+                  </span>
                 </div>
               </div>
-              <p className="text-center text-xs text-slate-400">Tidak perlu buka tab Buku Kas — semua sudah tercatat otomatis.</p>
+
+              <p className="text-center text-xs text-slate-400 pb-1">Tidak perlu buka tab Buku Kas — semua sudah tercatat otomatis.</p>
             </div>
           ) : jualRow && (() => {
             const harga = parseNumber(jualRow.harga_jual);
