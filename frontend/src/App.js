@@ -16,12 +16,13 @@ import { Produksi } from "@/components/Produksi";
 import { LogAktivitas } from "@/components/LogAktivitas";
 import { Login } from "@/components/Login";
 import { WebOrders } from "@/components/WebOrders";
+import { WebOrdersTab } from "@/components/WebOrdersTab";
 import { WebSettingsTab } from "@/components/WebSettingsTab";
 import { Toaster, toast } from "sonner";
 import { LogOut } from "lucide-react";
 import {
   Printer, BookText, CalendarRange, PieChart, HandCoins,
-  Plus, Calculator, AlertTriangle, TrendingUp, Layers, History, Globe
+  Plus, Calculator, AlertTriangle, TrendingUp, Layers, History, Globe, ShoppingCart
 } from "lucide-react";
 
 function App() {
@@ -148,10 +149,11 @@ function App() {
   };
 
   const allTabs = [
+    { key: "pesanan-web", label: "Pesanan Web", icon: ShoppingCart },
     { key: "kas", label: "Buku Kas", icon: BookText },
     { key: "hpp", label: "Kalkulator HPP", icon: Calculator },
     { key: "produksi", label: "Produksi", icon: Layers },
-    { key: "web", label: "Toko Online", icon: Globe },
+    { key: "web", label: "Eksterior Web", icon: Globe },
     { key: "rekap", label: "Rekap Bulanan", icon: CalendarRange },
     { key: "labarugi", label: "Laba Rugi & Bagi Hasil", icon: PieChart },
     { key: "piutang", label: "Piutang & Utang", icon: HandCoins },
@@ -159,8 +161,8 @@ function App() {
   ];
 
   const tabs = allTabs.filter(t => {
-    if (authUser?.role === "Owner") return true; // Owner sees all
-    if (authUser?.role === "Kasir") return ["hpp", "kas", "produksi", "piutang", "web"].includes(t.key);
+    if (authUser?.role === "Owner") return true;
+    if (authUser?.role === "Kasir") return ["pesanan-web", "hpp", "kas", "produksi", "piutang", "web"].includes(t.key);
     if (authUser?.role === "Produksi") return ["produksi"].includes(t.key);
     return false;
   });
@@ -312,6 +314,7 @@ function App() {
               <Produksi sales={sales} onStatusChange={api.updateSaleStatus} onUpdated={reload} role={authUser?.role} />
             )}
             {tab === "log" && authUser?.role === "Owner" && <LogAktivitas />}
+            {tab === "pesanan-web" && <WebOrdersTab onAccepted={reload} />}
             {tab === "web" && <WebSettingsTab />}
           </div>
         </div>
