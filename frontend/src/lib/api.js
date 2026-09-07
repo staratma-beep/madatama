@@ -38,10 +38,23 @@ export const api = {
   getSales: () => http.get("/sales").then((r) => r.data),
   createSale: (d) => http.post("/sales", d).then((r) => r.data),
   deleteSale: (id) => http.delete(`/sales/${id}`).then((r) => r.data),
+  updateSaleStatus: (id, status) => http.patch(`/sales/${id}/status`, { status_produksi: status }).then((r) => r.data),
 
   backup: () => http.get("/backup").then((r) => r.data),
   restore: (d) => http.post("/restore", d).then((r) => r.data),
   importTransactions: (items) => http.post("/import-transactions", items).then((r) => r.data),
+  getLogs: () => http.get("/logs").then((r) => r.data),
+  login: (creds) => http.post("/login", creds).then((r) => r.data),
+  getPublicOrders: () => http.get("/public-orders").then((r) => r.data),
+  resolvePublicOrder: (id) => http.delete(`/public-orders/${id}`).then((r) => r.data),
+  confirmPublicOrderPayment: (id) => http.post(`/public-orders/${id}/confirm-payment`).then((r) => r.data),
+  getWebSettings: () => http.get("/web-settings").then((r) => r.data),
+  updateWebSettings: (data) => http.put("/web-settings", data).then((r) => r.data),
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return http.post("/upload", formData, { headers: { "Content-Type": "multipart/form-data" } }).then(r => r.data.url);
+  },
 };
 
 export const JENIS_PEMASUKAN = [

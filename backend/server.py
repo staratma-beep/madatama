@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -21,6 +22,11 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
+
+# Create uploads directory if not exists
+os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=os.path.join(ROOT_DIR, "uploads")), name="uploads")
+
 api_router = APIRouter(prefix="/api")
 
 
@@ -133,6 +139,9 @@ class Product(BaseModel):
     harga_jual: float = 0
     stok: int = 0
     urutan: int = 0
+    is_public: bool = False
+    image_url: Optional[str] = ""
+    deskripsi: Optional[str] = ""
 
 
 class ProductCreate(BaseModel):
@@ -144,6 +153,9 @@ class ProductCreate(BaseModel):
     tambahan: float = 0
     harga_jual: float = 0
     stok: int = 0
+    is_public: bool = False
+    image_url: Optional[str] = ""
+    deskripsi: Optional[str] = ""
 
 
 _SALE_JENIS = {"Branding": "Penjualan Branding", "Printing": "Penjualan Printing", "Advertising": "Penjualan Advertising"}
@@ -165,6 +177,11 @@ class Sale(BaseModel):
     laba: float = 0
     product_id: Optional[str] = None
     transaction_id: Optional[str] = None
+    is_dp: bool = False
+    dp_amount: float = 0
+    piutang_record_id: Optional[str] = None
+    status_produksi: str = "Selesai"  # "Desain", "Cetak", "Finishing", "Selesai", "Diambil"
+    public_order_id: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -178,7 +195,25 @@ class SaleCreate(BaseModel):
     pembeli: Optional[str] = ""
     product_id: Optional[str] = None
     tanggal: Optional[str] = None
+    is_dp: bool = False
+    dp_amount: float = 0
+    status_produksi: Optional[str] = None
+    public_order_id: Optional[str] = None
 
+class ActivityLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: str = Field(default_factory=now_iso)
+    action: str
+    description: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class UserResponse(BaseModel):
+    username: str
+    name: str
+    role: str
 
 class BackupData(BaseModel):
     transactions: List[dict] = []
@@ -190,17 +225,46 @@ class BackupData(BaseModel):
     settings: dict = {}
 
 
+async def add_log(action: str, description: str):
+    log = ActivityLog(action=action, description=description)
+    await db.logs.insert_one(log.model_dump())
+
+@api_router.get("/logs", response_model=List[ActivityLog])
+async def get_logs():
+    return await db.logs.find({}, {"_id": 0}).sort("created_at", -1).limit(200).to_list(200)
+
+import bcrypt
+
+@api_router.post("/login")
+async def login(req: LoginRequest):
+    user = await db.users.find_one({"username": req.username})
+    if not user:
+        raise HTTPException(status_code=401, detail="Username tidak ditemukan")
+    
+    if not bcrypt.checkpw(req.password.encode(), user["password"].encode()):
+        raise HTTPException(status_code=401, detail="Password salah")
+        
+    return {
+        "ok": True,
+        "token": user["username"],  # simple token
+        "user": {
+            "username": user["username"],
+            "name": user.get("name", user["username"]),
+            "role": user.get("role", "Kasir")
+        }
+    }
+
 # ---------------- Transactions ----------------
 @api_router.get("/transactions", response_model=List[Transaction])
 async def get_transactions():
     docs = await db.transactions.find({}, {"_id": 0}).to_list(10000)
     return docs
 
-
 @api_router.post("/transactions", response_model=Transaction)
 async def create_transaction(input: TransactionCreate):
     obj = Transaction(**input.model_dump())
     await db.transactions.insert_one(obj.model_dump())
+    await add_log("Kas", f"Menambah transaksi {input.kategori}: {input.keterangan} ({input.nominal})")
     return obj
 
 
@@ -216,6 +280,9 @@ async def update_transaction(tid: str, input: TransactionCreate):
 
 @api_router.delete("/transactions/{tid}")
 async def delete_transaction(tid: str):
+    txn = await db.transactions.find_one({"id": tid})
+    if txn:
+        await add_log("Kas", f"Menghapus transaksi: {txn['keterangan']}")
     await db.transactions.delete_one({"id": tid})
     return {"ok": True}
 
@@ -272,6 +339,13 @@ async def settle_record(rid: str):
     rec["status"] = "Lunas"
     rec["transaction_id"] = txn.id
     await db.records.replace_one({"id": rid}, rec)
+    
+    # Check if this record is tied to a Sale DP
+    sale = await db.sales.find_one({"piutang_record_id": rid}, {"_id": 0})
+    if sale:
+        await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": False, "piutang_lunas": True}})
+        
+    await add_log("Pelunasan", f"Berhasil melunasi {rec['jenis']} dari {rec['nama']} lunas sejumlah {rec['nominal']}")
     return rec
 
 
@@ -285,6 +359,11 @@ async def unsettle_record(rid: str):
     rec["status"] = "Belum Lunas"
     rec["transaction_id"] = None
     await db.records.replace_one({"id": rid}, rec)
+    
+    sale = await db.sales.find_one({"piutang_record_id": rid}, {"_id": 0})
+    if sale:
+        await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": True, "piutang_lunas": False}})
+        
     return rec
 
 
@@ -415,26 +494,52 @@ async def create_sale(input: SaleCreate):
     nota_no = f"NT-{tanggal.replace('-', '')}-{seq:03d}"
 
     ket = f"{input.nama} x{qty}" if qty > 1 else input.nama
-    txn = Transaction(
-        tanggal=tanggal,
-        keterangan=ket,
-        kategori="Pemasukan",
-        jenis=jenis,
-        nominal=total,
-        keterangan_tambahan=f"Nota {nota_no}" + (f" - {input.pembeli}" if input.pembeli else ""),
-        auto_generated=True,
-    )
-    await db.transactions.insert_one(txn.model_dump())
+    dp_val = float(input.dp_amount) if input.is_dp else total
+    
+    txn = None
+    piutang_record = None
+
+    if dp_val > 0:
+        txn = Transaction(
+            tanggal=tanggal,
+            keterangan=ket + (" (DP)" if input.is_dp else ""),
+            kategori="Pemasukan",
+            jenis=jenis,
+            nominal=dp_val,
+            keterangan_tambahan=f"Nota {nota_no}" + (f" - {input.pembeli}" if input.pembeli else ""),
+            auto_generated=True,
+        )
+        await db.transactions.insert_one(txn.model_dump())
+        
+    if input.is_dp and total > dp_val:
+        piutang_record = Record(
+            tanggal=tanggal,
+            jenis="Piutang",
+            nama=input.pembeli or "Hamba Allah",
+            keterangan=f"Sisa Tagihan Nota {nota_no} - {ket}",
+            nominal=total - dp_val,
+            status="Belum Lunas",
+        )
+        await db.records.insert_one(piutang_record.model_dump())
+
+    status_prod = input.status_produksi or ("Desain" if input.is_dp else "Selesai")
 
     sale = Sale(
         nota_no=nota_no, tanggal=tanggal, nama=input.nama, kategori=input.kategori,
         jenis=jenis, pembeli=input.pembeli or "", qty=qty, harga_satuan=input.harga_satuan,
         hpp_satuan=input.hpp_satuan, diskon=diskon, total=total, laba=laba, product_id=input.product_id,
-        transaction_id=txn.id,
+        transaction_id=txn.id if txn else None,
+        is_dp=input.is_dp,
+        dp_amount=dp_val,
+        piutang_record_id=piutang_record.id if piutang_record else None,
+        status_produksi=status_prod,
+        public_order_id=input.public_order_id,
     )
     await db.sales.insert_one(sale.model_dump())
     if input.product_id:
         await db.products.update_one({"id": input.product_id}, {"$inc": {"stok": -qty}})
+    
+    await add_log("Penjualan", f"Mencatat pesanan {nota_no}: {input.nama} x{qty} dari {input.pembeli or 'Pelanggan'}")
     return sale
 
 
@@ -444,10 +549,26 @@ async def delete_sale(sid: str):
     if sale:
         if sale.get("transaction_id"):
             await db.transactions.delete_one({"id": sale["transaction_id"]})
+        if sale.get("piutang_record_id"):
+            await db.records.delete_one({"id": sale["piutang_record_id"]})
         if sale.get("product_id"):
-            await db.products.update_one({"id": sale["product_id"]}, {"$inc": {"stok": sale.get("qty", 0)}})
+            await db.products.update_one({"id": sale["product_id"], "stok": {"$exists": True}}, {"$inc": {"stok": sale.get("qty", 0)}})
     await db.sales.delete_one({"id": sid})
+    await add_log("Hapus Nota", f"Menghapus pesanan nota {sale.get('nota_no', sid)}")
     return {"ok": True}
+
+
+@api_router.patch("/sales/{sid}/status")
+async def update_sale_status(sid: str, payload: dict):
+    new_status = payload.get("status_produksi")
+    if not new_status:
+        raise HTTPException(400, "status_produksi required")
+    await db.sales.update_one({"id": sid}, {"$set": {"status_produksi": new_status}})
+    
+    sale = await db.sales.find_one({"id": sid}, {"_id": 0})
+    if sale:
+        await add_log("Produksi", f"Status pesanan {sale['nota_no']} diubah menjadi {new_status}")
+    return {"ok": True, "status_produksi": new_status}
 
 
 # ---------------- Settings ----------------
@@ -517,6 +638,30 @@ async def restore(data: BackupData):
         s["key"] = "main"
         await db.settings.insert_one(s)
     return {"ok": True}
+    
+class WebSettingsSchema(BaseModel):
+    title: str = "Kualitas Terbaik, Harga Masuk Akal."
+    subtitle: str = "Dari spanduk besar hingga stempel kecil, semua kebutuhan promosi dan bisnis Anda ada di sini."
+    banner_url: str = ""
+    theme_gradient: str = "indigo-purple"
+    banner_position: str = "center"
+    banner_opacity: int = 40
+
+@api_router.get("/web-settings", response_model=WebSettingsSchema)
+async def get_web_settings():
+    doc = await db.web_settings.find_one({"key": "main"}, {"_id": 0})
+    if not doc:
+        doc = WebSettingsSchema().model_dump()
+        doc["key"] = "main"
+        await db.web_settings.insert_one(doc)
+    return doc
+
+@api_router.put("/web-settings", response_model=WebSettingsSchema)
+async def update_web_settings(input: WebSettingsSchema):
+    doc = input.model_dump()
+    doc["key"] = "main"
+    await db.web_settings.replace_one({"key": "main"}, doc, upsert=True)
+    return doc
 
 
 @api_router.post("/import-transactions")
@@ -526,6 +671,177 @@ async def import_transactions(items: List[TransactionCreate]):
         await db.transactions.insert_many(objs)
     return {"ok": True, "count": len(objs)}
 
+@api_router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    import shutil
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{uuid.uuid4().hex[:8]}.{ext}"
+    path = os.path.join(ROOT_DIR, "uploads", filename)
+    with open(path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"url": f"http://localhost:8000/uploads/{filename}"}
+
+
+# ---------------- Public API (Storefront) ----------------
+class PublicOrderItem(BaseModel):
+    product_id: str
+    qty: int = 1
+    catatan: Optional[str] = ""
+
+class PublicOrderCreate(BaseModel):
+    nama: str
+    kontak: str
+    items: List[PublicOrderItem]
+
+@api_router.get("/public/settings")
+async def public_get_settings():
+    doc = await db.web_settings.find_one({"key": "main"}, {"_id": 0})
+    if not doc:
+        return WebSettingsSchema().model_dump()
+    return doc
+
+@api_router.get("/public/products")
+async def public_get_products():
+    prods = await db.products.find({"is_public": True}, {"_id": 0}).to_list(100)
+    return prods
+
+@api_router.post("/public/orders")
+async def public_create_order(req: PublicOrderCreate):
+    order_id = "ORD-" + str(uuid.uuid4())[:8].upper()
+    doc = {
+        "id": order_id,
+        "nama": req.nama,
+        "kontak": req.kontak,
+        "items": [i.model_dump() for i in req.items],
+        "status": "Menunggu Konfirmasi",
+        "created_at": now_iso()
+    }
+    await db.public_orders.insert_one(doc)
+    return {"ok": True, "order_id": order_id}
+
+class PaymentSubmit(BaseModel):
+    payment_method: str
+    bukti_bayar: str
+
+@api_router.post("/public/orders/{order_id}/pay")
+async def public_pay_order(order_id: str, payload: PaymentSubmit):
+    po = await db.public_orders.find_one({"id": order_id})
+    if not po:
+        raise HTTPException(404, "Pesanan tidak ditemukan")
+    await db.public_orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "payment_method": payload.payment_method,
+            "bukti_bayar": payload.bukti_bayar,
+            "payment_status": "Menunggu Konfirmasi Bayar"
+        }}
+    )
+    return {"ok": True}
+
+@api_router.get("/public/track/{order_id}")
+async def public_track_order(order_id: str):
+    # Could be tracking from public_orders or from sales (nota)
+    po = await db.public_orders.find_one({"id": order_id}, {"_id": 0})
+    if po:
+        sales = await db.sales.find({"public_order_id": order_id}, {"_id": 0}).to_list(100)
+        items = []
+        overall_status = po.get("status")
+        total_tagihan = 0
+        if sales:
+            if overall_status == "Menunggu Konfirmasi": 
+                # If they have sales but status is still awaiting, although logic in front sets it to Diterima, let's just make it SEDANG DIPROSES if not finished
+                overall_status = "Menunggu Pembayaran" if not po.get('bukti_bayar') else "SEDANG DIPROSES"
+            elif overall_status == "Diterima (Sedang Diproses)":
+                overall_status = "Menunggu Pembayaran" if not po.get('bukti_bayar') else "SEDANG DIPROSES"
+                
+            all_done = True
+            for s in sales:
+                total_tagihan += s.get("total", 0)
+                items.append({
+                    "nama": s["nama"],
+                    "qty": s["qty"],
+                    "status": s.get("status_produksi", "Menunggu")
+                })
+                if s.get("status_produksi") != "Selesai":
+                    all_done = False
+                    
+            if all_done:
+                overall_status = "SELESAI"
+                
+        return {
+            "id": po["id"], 
+            "type": "pesanan", 
+            "status": overall_status,
+            "items": items,
+            "total_tagihan": total_tagihan,
+            "payment_method": po.get("payment_method"),
+            "bukti_bayar": po.get("bukti_bayar"),
+            "payment_status": po.get("payment_status", "Belum Bayar")
+        }
+    
+    # If not in public orders, check sales (nota) if they use nota as tracking ID
+    sale = await db.sales.find_one({"nota_no": order_id}, {"_id": 0})
+    if sale:
+        return {"id": sale["nota_no"], "type": "produksi", "status": sale.get("status_produksi")}
+    
+    raise HTTPException(404, "Pesanan tidak ditemukan")
+
+# Admin endpoints for public orders
+@api_router.get("/public-orders")
+async def get_admin_public_orders():
+    # Return all orders, sorting newest first
+    orders = await db.public_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(300)
+    for o in orders:
+        for item in o.get("items", []):
+            product = await db.products.find_one({"id": item["product_id"]}, {"_id": 0})
+            item["product"] = product
+        
+        # Legacy fallback for old test requests
+        if "product_id" in o and "product" not in o:
+            product = await db.products.find_one({"id": o["product_id"]}, {"_id": 0})
+            o["product"] = product
+    return orders
+
+@api_router.delete("/public-orders/{order_id}")
+async def resolve_public_order(order_id: str):
+    await db.public_orders.update_one({"id": order_id}, {"$set": {"status": "Diterima (Sedang Diproses)"}})
+    return {"ok": True}
+
+@api_router.post("/public-orders/{order_id}/confirm-payment")
+async def confirm_public_order_payment(order_id: str):
+    po = await db.public_orders.find_one({"id": order_id})
+    if not po:
+        return {"ok": False, "msg": "Not found"}
+
+    payment_method = po.get("payment_method", "")
+    method_str = f" (Via {payment_method})" if payment_method else ""
+
+    await db.public_orders.update_one({"id": order_id}, {"$set": {"payment_status": "Lunas"}})
+    # Mark all related piutang records as lunas
+    sales = await db.sales.find({"public_order_id": order_id}).to_list(100)
+    for sale in sales:
+        rid = sale.get("piutang_record_id")
+        if rid:
+            rec = await db.records.find_one({"id": rid})
+            if rec and rec["status"] == "Belum Lunas":
+                sale_jenis = sale.get("jenis", "Lain-lain")
+                txn = Transaction(
+                    tanggal=datetime.now(WIB).strftime("%Y-%m-%d"),
+                    keterangan=f"Pelunasan Pesanan Web: {rec['nama']}{method_str}",
+                    kategori="Pemasukan",
+                    jenis=sale_jenis,
+                    nominal=rec["nominal"],
+                    keterangan_tambahan=rec.get("keterangan", ""),
+                    auto_generated=True,
+                    source_record_id=rid,
+                )
+                await db.transactions.insert_one(txn.model_dump())
+                rec["status"] = "Lunas"
+                rec["transaction_id"] = txn.id
+                await db.records.replace_one({"id": rid}, rec)
+                await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": False, "piutang_lunas": True}})
+                await add_log("Pelunasan", f"Berhasil konfirmasi bayar online {rec['nama']} sejumlah {rec['nominal']}{method_str}")
+    return {"ok": True}
 
 app.include_router(api_router)
 

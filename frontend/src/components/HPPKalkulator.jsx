@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { formatRupiah, formatNumberInput, parseNumber, todayISO, monthKey, monthLabel, formatTanggal } from "../lib/format";
 import { api } from "../lib/api";
-import { downloadNota } from "../lib/nota";
+import { downloadNota, downloadInvoice, downloadSuratJalan } from "../lib/nota";
 import { exportSalesCSV } from "../lib/salesExport";
 import { downloadReport } from "../lib/salesReport";
 import { Button } from "./ui/button";
@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet, FileSpreadsheet, Truck, Search, Globe, Image } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -40,6 +40,9 @@ const toPayload = (r) => ({
   tambahan: parseNumber(r.tambahan),
   harga_jual: parseNumber(r.harga_jual),
   stok: parseInt(r.stok, 10) || 0,
+  is_public: r.is_public || false,
+  image_url: r.image_url || "",
+  deskripsi: r.deskripsi || ""
 });
 
 const NumCell = ({ value, onChange, onBlur, testId }) => (
@@ -64,6 +67,8 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
   const [jualPembeli, setJualPembeli] = useState("");
   const [jualDiskon, setJualDiskon] = useState("0");
   const [jualDone, setJualDone] = useState(null);
+  const [jualIsDp, setJualIsDp] = useState(false);
+  const [jualDpAmount, setJualDpAmount] = useState("");
   const [notaDel, setNotaDel] = useState(null);
   const [profile, setProfile] = useState({});
   const [jualDiskonMode, setJualDiskonMode] = useState("rp");
@@ -75,6 +80,11 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
   const [stokAddOpen, setStokAddOpen] = useState(false);
   const [stokRow, setStokRow] = useState(null);
   const [stokAddQty, setStokAddQty] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Public Web Settings
+  const [webMenuOpen, setWebMenuOpen] = useState(false);
+  const [webRow, setWebRow] = useState(null);
 
   const refresh = useCallback(async () => {
     const [p, s, st] = await Promise.all([api.getProducts(), api.getSales(), api.getSettings()]);
@@ -151,6 +161,8 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     setJualDiskon("0");
     setJualDiskonMode("rp");
     setJualPembeli("");
+    setJualIsDp(false);
+    setJualDpAmount("");
   };
 
   const confirmJual = async (cetak) => {
@@ -165,6 +177,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     const sale = await api.createSale({
       product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
       qty, harga_satuan: harga, hpp_satuan: hpp, diskon: diskonRp, pembeli: jualPembeli, tanggal: todayISO(),
+      is_dp: jualIsDp, dp_amount: parseNumber(jualDpAmount) || 0,
     });
     setRows((rs) => rs.map((x) => (x.id === jualRow.id ? { ...x, stok: (parseInt(x.stok, 10) || 0) - qty } : x)));
     if (cetak) downloadNota(sale, profile);
@@ -183,6 +196,30 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     await refresh();
     onSold && onSold();
     toast.success("Nota dihapus, stok dikembalikan");
+  };
+
+  const applyWebSettings = async () => {
+    try {
+      await api.updateProduct(webRow.id, toPayload(webRow));
+      toast.success(`Pengaturan web untuk ${webRow.nama} disimpan.`);
+      setWebMenuOpen(false);
+      refresh();
+    } catch (e) {
+      toast.error("Gagal menyimpan pengaturan web");
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.loading("Mengunggah gambar...", { id: "upload" });
+      const url = await api.uploadImage(file);
+      setWebRow(prev => ({ ...prev, image_url: url }));
+      toast.success("Gambar berhasil diunggah", { id: "upload" });
+    } catch (err) {
+      toast.error("Gagal mengunggah gambar", { id: "upload" });
+    }
   };
 
   const applySalin = async () => {
@@ -219,7 +256,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
   const topProfit = [...aggList].sort((a, b) => b.laba - a.laba).slice(0, 5);
 
   const renderTable = (kategori) => {
-    const items = rows.filter((r) => r.kategori === kategori);
+    const items = rows.filter((r) => r.kategori === kategori && r.nama.toLowerCase().includes(searchQuery.toLowerCase()));
     const withHarga = items.filter((r) => parseNumber(r.harga_jual) > 0);
     const avgMargin = withHarga.length
       ? withHarga.reduce((a, r) => {
@@ -279,8 +316,8 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                         <div className="relative">
                           <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)}
                             className={`h-9 w-16 text-right font-mono-num font-bold ${stokKritis ? "text-red-600 border-red-300 bg-red-50" :
-                                stokRendah ? "text-amber-600 border-amber-200 bg-amber-50" :
-                                  "text-slate-700"
+                              stokRendah ? "text-amber-600 border-amber-200 bg-amber-50" :
+                                "text-slate-700"
                               }`}
                             data-testid={`hpp-stok-${r.id}`}
                           />
@@ -299,9 +336,9 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                     <td className={`whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold ${laba >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-laba-${r.id}`}>{formatRupiah(laba)}</td>
                     <td className="px-3 py-2 text-right" data-testid={`hpp-margin-${r.id}`}>
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${harga <= 0 ? "bg-slate-100 text-slate-400" :
-                          marginBagus ? "bg-emerald-100 text-emerald-700" :
-                            marginCukup ? "bg-amber-100 text-amber-700" :
-                              "bg-red-100 text-red-600"
+                        marginBagus ? "bg-emerald-100 text-emerald-700" :
+                          marginCukup ? "bg-amber-100 text-amber-700" :
+                            "bg-red-100 text-red-600"
                         }`}>
                         {harga > 0 ? `${margin.toFixed(1)}%` : "—"}
                       </span>
@@ -310,6 +347,9 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                       <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2.5 hover:bg-emerald-700 shadow-sm" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
                         <ShoppingCart size={13} className="mr-1" /> Jual
                       </Button>
+                      <button onClick={() => { setWebRow(r); setWebMenuOpen(true); }} className={`mr-2 align-middle transition-colors ${r.is_public ? 'text-indigo-500 hover:text-indigo-700' : 'text-slate-300 hover:text-indigo-500'}`} title="Toko Online">
+                        <Globe size={16} />
+                      </button>
                       <button onClick={() => setToDelete(r)} className="text-slate-200 hover:text-red-500 align-middle transition-colors" data-testid={`hpp-delete-${r.id}`}>
                         <Trash2 size={15} />
                       </button>
@@ -458,6 +498,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                   <p className="truncate text-sm font-semibold text-slate-800">{s.nota_no} · {s.nama} <span className="font-normal text-slate-500">×{s.qty}</span></p>
                   <p className="truncate text-xs text-slate-400">
                     {formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · -${formatRupiah(s.diskon)}` : ""}
+                    {s.is_dp && <span className="ml-2 font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200">DP (Sisa {formatRupiah(s.total - s.dp_amount)})</span>}
                   </p>
                 </div>
                 <div className="text-right hidden sm:block">
@@ -465,8 +506,13 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                   {(s.laba > 0) && <p className="text-xs text-slate-400 font-mono-num">laba {formatRupiah(s.laba)}</p>}
                 </div>
                 <div className="sm:hidden font-mono-num text-sm font-bold text-emerald-600">{formatRupiah(s.total)}</div>
-                <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadNota(s, profile)} data-testid={`nota-print-${s.id}`}><Download size={14} /></Button>
-                <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-500 flex-none" data-testid={`nota-delete-${s.id}`}><Trash2 size={15} /></button>
+
+                <div className="flex gap-1 flex-wrap sm:flex-nowrap">
+                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadNota(s, profile)} title="Nota Kecil"><FileText size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">Nota</span></Button>
+                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={() => downloadInvoice(s, profile)} title="Invoice A4"><FileSpreadsheet size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">Invoice</span></Button>
+                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadSuratJalan(s, profile)} title="Surat Jalan"><Truck size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">S.Jalan</span></Button>
+                  <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-500 flex-none ml-1 px-1" data-testid={`nota-delete-${s.id}`}><Trash2 size={15} /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -475,18 +521,31 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
 
       {/* Tabs Produk per Kategori */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
-          {KATEGORI.map((k) => (
-            <TabsTrigger key={k} value={k} className="data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`hpp-tab-${k}`}>
-              {k}
-              <span className="ml-1.5 hidden rounded-full bg-slate-200 px-1.5 text-[10px] font-bold text-slate-600 sm:inline">
-                {rows.filter((r) => r.kategori === k).length}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex flex-col sm:flex-row gap-3 mb-4 sm:items-center justify-between">
+          <TabsList className="grid w-full sm:w-auto grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
+            {KATEGORI.map((k) => (
+              <TabsTrigger key={k} value={k} className="data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`hpp-tab-${k}`}>
+                {k}
+                <span className="ml-1.5 hidden rounded-full bg-slate-200 px-1.5 text-[10px] font-bold text-slate-600 sm:inline">
+                  {rows.filter((r) => r.kategori === k).length}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <div className="relative w-full sm:w-64 flex-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Input
+              placeholder={`Cari di ${tab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10 w-full bg-white border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
         {KATEGORI.map((k) => (
-          <TabsContent key={k} value={k} className="mt-4">{renderTable(k)}</TabsContent>
+          <TabsContent key={k} value={k} className="mt-0">{renderTable(k)}</TabsContent>
         ))}
       </Tabs>
 
@@ -541,12 +600,33 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
               ? Math.round(subtotal * (parseNumber(jualDiskon) / 100))
               : Math.max(0, parseNumber(jualDiskon));
             const total = Math.max(0, subtotal - diskon);
+            const qNum = parseInt(jualQty, 10) || 1;
+            const stokTersedia = parseInt(jualRow.stok, 10) || 0;
+            const isStockEnough = qNum > 0 && qNum <= stokTersedia;
+            const qtyStr = isStockEnough && qNum > 0 ? "" : "border-red-400 focus-visible:ring-red-400";
             return (
               <div className="space-y-4 py-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Jumlah (Qty)</Label>
-                    <Input type="number" min="1" value={jualQty} onChange={(e) => setJualQty(e.target.value)} data-testid="jual-qty-input" />
+                    <div className="flex justify-between items-center mb-0.5">
+                      <Label>Jumlah (Qty)</Label>
+                      <span className="text-[10px] text-slate-500 font-medium">Stok: {stokTersedia}</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={Math.max(1, stokTersedia)}
+                      value={jualQty}
+                      onChange={(e) => {
+                        const val = Math.min(parseInt(e.target.value) || 1, stokTersedia);
+                        setJualQty(e.target.value === "" ? "" : String(val));
+                      }}
+                      className={qtyStr}
+                      data-testid="jual-qty-input"
+                    />
+                    {!isStockEnough && qNum > 0 && (
+                      <p className="text-[10px] text-red-600 mt-1 font-medium">Qty melebihi stok!</p>
+                    )}
                   </div>
                   <div>
                     <Label>Harga Satuan</Label>
@@ -572,9 +652,25 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                 {diskon > 0 && (
                   <p className="px-1 text-xs text-slate-500" data-testid="jual-diskon-info">Subtotal {formatRupiah(subtotal)} − Diskon {formatRupiah(diskon)}{jualDiskonMode === "persen" ? ` (${parseNumber(jualDiskon)}%)` : ""}</p>
                 )}
-                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
-                  <span className="text-sm font-semibold text-emerald-700">Total Pemasukan</span>
-                  <span className="font-mono-num text-xl font-bold text-emerald-700" data-testid="jual-total">{formatRupiah(total)}</span>
+
+                <div className="flex items-center gap-2 mt-4 px-1">
+                  <input type="checkbox" id="is-dp" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4" checked={jualIsDp} onChange={(e) => setJualIsDp(e.target.checked)} />
+                  <Label htmlFor="is-dp" className="font-semibold text-slate-700">Pembayaran Uang Muka (DP)</Label>
+                </div>
+
+                {jualIsDp && (
+                  <div className="mt-2 pl-6">
+                    <Label className="text-xs text-slate-500 mb-1 block">Nominal DP Dibayarkan</Label>
+                    <Input inputMode="numeric" placeholder="Contoh: 500000" value={jualDpAmount} onChange={(e) => setJualDpAmount(formatNumberInput(e.target.value))} className="bg-white font-mono-num" />
+                    <p className="text-[10px] text-amber-600 mt-1 font-medium bg-amber-50 p-1.5 rounded inline-block">Sisa {formatRupiah(Math.max(0, total - parseNumber(jualDpAmount)))} otomatis masuk ke Piutang (Status Produksi masuk Antrean).</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 mt-4 border border-emerald-100">
+                  <span className="text-sm font-semibold text-emerald-800">{jualIsDp ? "Pemasukan (DP)" : "Total Tagihan"}</span>
+                  <span className="font-mono-num text-xl font-bold text-emerald-700" data-testid="jual-total">
+                    {formatRupiah(jualIsDp ? parseNumber(jualDpAmount) : total)}
+                  </span>
                 </div>
               </div>
             );
@@ -588,8 +684,8 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={() => confirmJual(false)} data-testid="jual-catat-btn">Catat Saja</Button>
-                <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => confirmJual(true)} data-testid="jual-cetak-btn">
+                <Button variant="outline" disabled={parseInt(jualQty, 10) > (parseInt(jualRow?.stok, 10) || 0)} onClick={() => confirmJual(false)} data-testid="jual-catat-btn">Catat Saja</Button>
+                <Button className="bg-indigo-600 hover:bg-indigo-700" disabled={parseInt(jualQty, 10) > (parseInt(jualRow?.stok, 10) || 0)} onClick={() => confirmJual(true)} data-testid="jual-cetak-btn">
                   <Download size={15} className="mr-1" /> Catat &amp; Unduh Nota
                 </Button>
               </>
@@ -680,6 +776,74 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Web Setting Dialog */}
+      <Dialog open={webMenuOpen} onOpenChange={setWebMenuOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl flex items-center gap-2">
+              <Globe className="text-indigo-600" size={20} /> Etalase Toko Online
+            </DialogTitle>
+            <DialogDescription>
+              Atur tampilan untuk produk <strong className="text-slate-800">{webRow?.nama}</strong> di website publik.
+            </DialogDescription>
+          </DialogHeader>
+          {webRow && (
+            <div className="space-y-4 py-3">
+              <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                <div>
+                  <Label className="text-sm font-bold text-indigo-900 block">Jual Online</Label>
+                  <p className="text-xs text-indigo-700/80 mt-0.5">Tampilkan katalog ini di web publik</p>
+                </div>
+                <div
+                  className={`w-12 h-6 rounded-full cursor-pointer transition-colors relative ${webRow.is_public ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                  onClick={() => setWebRow({ ...webRow, is_public: !webRow.is_public })}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${webRow.is_public ? 'translate-x-6' : ''}`} />
+                </div>
+              </div>
+
+              <div className={!webRow.is_public ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+                <div className="mb-3">
+                  <Label>Foto / Gambar Produk (Opsional)</Label>
+                  <div className="flex gap-3 mt-1 items-center">
+                    <div className="bg-slate-100 w-16 h-16 rounded-xl flex-none grid place-items-center overflow-hidden border border-slate-200">
+                      {webRow.image_url ? (
+                        <img src={webRow.image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Image size={24} className="text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="cursor-pointer file:cursor-pointer file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-indigo-100 pt-2"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1.5 ml-1">Pilih gambar dari Komputer/HP Anda agar langsung tampil di Web Publik.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Deskripsi / Spesifikasi Produk</Label>
+                  <textarea
+                    className="w-full mt-1 flex min-h-[80px] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Contoh: Kertas Art Paper 150gsm, Cetak Full Color, Pengerjaan 1 hari..."
+                    value={webRow.deskripsi || ""}
+                    onChange={(e) => setWebRow({ ...webRow, deskripsi: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWebMenuOpen(false)}>Batal</Button>
+            <Button onClick={applyWebSettings} className="bg-indigo-600 hover:bg-indigo-700">Simpan Perubahan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -12,10 +12,16 @@ import { HPPKalkulator } from "@/components/HPPKalkulator";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { Toolbar } from "@/components/Toolbar";
 import { FixedCostsBar } from "@/components/FixedCostsBar";
+import { Produksi } from "@/components/Produksi";
+import { LogAktivitas } from "@/components/LogAktivitas";
+import { Login } from "@/components/Login";
+import { WebOrders } from "@/components/WebOrders";
+import { WebSettingsTab } from "@/components/WebSettingsTab";
 import { Toaster, toast } from "sonner";
+import { LogOut } from "lucide-react";
 import {
   Printer, BookText, CalendarRange, PieChart, HandCoins,
-  Plus, Calculator, AlertTriangle, TrendingUp,
+  Plus, Calculator, AlertTriangle, TrendingUp, Layers, History, Globe
 } from "lucide-react";
 
 function App() {
@@ -26,18 +32,39 @@ function App() {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
+  const [settings, setSettings] = useState({});
   const [tab, setTab] = useState("kas");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+
+  const [authUser, setAuthUser] = useState(() => {
+    const saved = localStorage.getItem("madatama_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLogin = (u) => {
+    localStorage.setItem("madatama_user", JSON.stringify(u));
+    setAuthUser(u);
+    setTab(u.role === "Produksi" ? "produksi" : (u.role === "Kasir" ? "hpp" : "kas"));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("madatama_user");
+    setAuthUser(null);
+  };
 
   const reload = useCallback(async () => {
     const [t, r, p, s, fc, sl, pr] = await Promise.all([
       api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(), api.getProducts(),
     ]);
-    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setFixedCosts(fc); setSales(sl); setProducts(pr);
+    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setSettings(s); setFixedCosts(fc); setSales(sl); setProducts(pr);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    document.title = settings.nama_usaha || "Madatama Pro";
+  }, [settings.nama_usaha]);
 
   const cashBalance = useMemo(() => computeCashBalance(transactions, saldoAwal), [transactions, saldoAwal]);
   const curMonth = monthKey(todayISO());
@@ -53,6 +80,12 @@ function App() {
   const handleSubmit = async (data) => {
     if (editing) { await api.updateTransaction(editing.id, data); toast.success("Transaksi diperbarui"); }
     else { await api.createTransaction(data); toast.success("Transaksi ditambahkan"); }
+    setDialogOpen(false); setEditing(null); reload();
+  };
+
+  const handleSale = async (data) => {
+    await api.createSale({ ...data, tanggal: todayISO() });
+    toast.success("Penjualan instan dicatat di Buku Kas");
     setDialogOpen(false); setEditing(null); reload();
   };
 
@@ -114,13 +147,27 @@ function App() {
     reload();
   };
 
-  const tabs = [
+  const allTabs = [
     { key: "kas", label: "Buku Kas", icon: BookText },
     { key: "hpp", label: "Kalkulator HPP", icon: Calculator },
+    { key: "produksi", label: "Produksi", icon: Layers },
+    { key: "web", label: "Toko Online", icon: Globe },
     { key: "rekap", label: "Rekap Bulanan", icon: CalendarRange },
     { key: "labarugi", label: "Laba Rugi & Bagi Hasil", icon: PieChart },
     { key: "piutang", label: "Piutang & Utang", icon: HandCoins },
+    { key: "log", label: "Log Aktivitas", icon: History },
   ];
+
+  const tabs = allTabs.filter(t => {
+    if (authUser?.role === "Owner") return true; // Owner sees all
+    if (authUser?.role === "Kasir") return ["hpp", "kas", "produksi", "piutang", "web"].includes(t.key);
+    if (authUser?.role === "Produksi") return ["produksi"].includes(t.key);
+    return false;
+  });
+
+  if (!authUser) {
+    return <Login onLogin={handleLogin} profile={settings} />;
+  }
 
   return (
     <div className="App min-h-screen" style={{ background: "linear-gradient(135deg, #eef2ff 0%, #f0f4ff 50%, #faf5ff 100%)" }}>
@@ -131,14 +178,18 @@ function App() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <div
-              className="grid h-10 w-10 place-items-center rounded-xl text-white shadow-md"
+              className="relative grid h-10 w-10 overflow-hidden place-items-center rounded-xl text-white shadow-md shrink-0"
               style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
             >
-              <Printer size={20} />
+              {settings.logo ? (
+                <img src={settings.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover bg-white" />
+              ) : (
+                <Printer size={20} />
+              )}
             </div>
             <div>
               <h1 className="font-heading text-lg font-bold leading-tight text-slate-900">
-                Bukuku <span className="gradient-text">Pro</span>
+                {settings.nama_usaha || "Bukuku Pro"}
               </h1>
               <p className="text-xs text-slate-400 font-medium">Pembukuan Percetakan & Branding</p>
             </div>
@@ -149,6 +200,30 @@ function App() {
               Sistem Aktif
             </div>
             <Toolbar transactions={transactions} saldoAwal={saldoAwal} onReload={reload} />
+            <div className="flex items-center gap-3 ml-2 pl-3 sm:ml-4 sm:pl-4 border-l border-slate-200">
+              <a
+                href={`http://${window.location.hostname}:5173`}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden sm:flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 transition-colors"
+                title="Buka Toko Online (Frontend Publik)"
+              >
+                <Globe size={12} />
+                Buka Web
+              </a>
+              <WebOrders onAccepted={reload} />
+              <div className="text-right hidden md:block">
+                <p className="text-sm font-bold text-slate-700 leading-tight">{authUser?.name}</p>
+                <p className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">{authUser?.role}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="grid h-9 w-9 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 place-items-center rounded-xl transition-colors"
+                title="Keluar (Logout)"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -156,15 +231,18 @@ function App() {
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ===== DASHBOARD CARDS ===== */}
-        <Dashboard
-          cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
-          piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
-        />
+        {authUser?.role !== "Produksi" && (
+          <Dashboard
+            cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
+            piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
+          />
+        )}
 
         {/* ===== LOW STOCK ALERT ===== */}
-        {lowStock.length > 0 && (
+        {lowStock.length > 0 && authUser?.role !== "Produksi" && (
           <div
-            className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-4 shadow-sm fade-up"
+            className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-5 py-4 border border-amber-200 shadow-sm cursor-pointer hover:bg-amber-100 transition-colors"
+            onClick={() => { setTab("hpp"); window.scrollTo({ top: 300, behavior: "smooth" }); }}
             data-testid="low-stock-alert"
           >
             <div className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-amber-100">
@@ -180,7 +258,9 @@ function App() {
         )}
 
         {/* ===== FIXED COSTS BAR ===== */}
-        <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
+        {tab === "kas" && authUser?.role === "Owner" && (
+          <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
+        )}
 
         {/* ===== MAIN TABS ===== */}
         <div className="rounded-2xl border border-indigo-100/60 bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
@@ -214,25 +294,30 @@ function App() {
 
           {/* Tab Content */}
           <div className="p-5">
-            {tab === "kas" && (
+            {tab === "kas" && authUser?.role !== "Produksi" && (
               <BukuKas
-                transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance}
+                transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance} profile={settings} sales={sales}
                 onAdd={handleAdd} onEdit={handleEdit} onDelete={handleDelete}
               />
             )}
-            {tab === "hpp" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} />}
-            {tab === "rekap" && <RekapBulanan transactions={transactions} />}
-            {tab === "labarugi" && (
+            {tab === "hpp" && authUser?.role !== "Produksi" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} role={authUser?.role} />}
+            {tab === "rekap" && authUser?.role === "Owner" && <RekapBulanan transactions={transactions} />}
+            {tab === "labarugi" && authUser?.role === "Owner" && (
               <LabaRugi transactions={transactions} profitShares={profitShares} onMarkShared={markShared} onUnmarkShared={unmarkShared} />
             )}
-            {tab === "piutang" && (
+            {tab === "piutang" && authUser?.role !== "Produksi" && (
               <PiutangUtang records={records} onCreate={createRecord} onSettle={settleRecord} onUnsettle={unsettleRecord} onDelete={deleteRecord} />
             )}
+            {tab === "produksi" && (
+              <Produksi sales={sales} onStatusChange={api.updateSaleStatus} onUpdated={reload} role={authUser?.role} />
+            )}
+            {tab === "log" && authUser?.role === "Owner" && <LogAktivitas />}
+            {tab === "web" && <WebSettingsTab />}
           </div>
         </div>
       </main>
 
-      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={handleSubmit} editing={editing} fixedCosts={fixedCosts} />
+      <TransactionDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmit={handleSubmit} editing={editing} fixedCosts={fixedCosts} onSale={handleSale} products={products} />
 
       {/* FAB mobile */}
       <button

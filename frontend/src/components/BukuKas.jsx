@@ -12,16 +12,20 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "./ui/dialog";
 import { Checkbox } from "./ui/checkbox";
-import { Pencil, Trash2, Plus, Filter, X, TrendingUp, TrendingDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Filter, X, TrendingUp, TrendingDown, Eye } from "lucide-react";
 
 const ALL_JENIS = ["Semua", ...JENIS_PEMASUKAN, ...JENIS_PENGELUARAN.filter((j) => j !== "Lain-lain")];
 
-export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cashBalance }) => {
+export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cashBalance, profile = {}, sales = [] }) => {
   const [f, setF] = useState({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua", search: "" });
   const [showFilter, setShowFilter] = useState(false);
   const [toDelete, setToDelete] = useState(null);
   const [toDeleteMultiple, setToDeleteMultiple] = useState(false);
+  const [viewDetail, setViewDetail] = useState(null);
   const [selected, setSelected] = useState([]);
 
   const withBal = useMemo(() => withRunningBalance(transactions, saldoAwal), [transactions, saldoAwal]);
@@ -208,18 +212,27 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
                     {formatRupiah(t.saldo)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1 text-slate-400">
+                      <button
+                        onClick={() => setViewDetail(t)}
+                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                        title="Detail"
+                      >
+                        <Eye size={14} />
+                      </button>
                       <button
                         onClick={() => onEdit(t)}
-                        className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                         data-testid={`edit-btn-${t.id}`}
+                        title="Edit"
                       >
                         <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => setToDelete(t)}
-                        className="grid h-7 w-7 place-items-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors"
                         data-testid={`delete-btn-${t.id}`}
+                        title="Hapus"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -281,6 +294,107 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {(() => {
+        const linkedSale = viewDetail ? sales.find(s => s.transaction_id === viewDetail.id || (viewDetail.source_record_id && s.piutang_record_id === viewDetail.source_record_id)) : null;
+
+        return (
+          <Dialog open={!!viewDetail} onOpenChange={(o) => (!o) && setViewDetail(null)}>
+            <DialogContent className="rounded-3xl p-0 overflow-hidden max-w-sm border-0 shadow-2xl bg-white sm:max-w-[400px]">
+              {/* Header seperti Nota */}
+              <div className="bg-indigo-600 p-5 text-white flex gap-3 items-center">
+                <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center p-1.5 shadow-sm flex-none">
+                  {profile?.logo ? (
+                    <img src={profile.logo} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-xl font-bold text-indigo-600">{profile?.nama_usaha?.[0] || "B"}</span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg leading-tight">{profile?.nama_usaha || "Bukuku Pro"}</h2>
+                  <p className="text-xs text-indigo-100 opacity-90 line-clamp-1">{profile?.alamat || "Alamat usaha belum diatur"}</p>
+                  <p className="text-xs text-indigo-100 opacity-90">{profile?.telepon || ""}</p>
+                </div>
+              </div>
+
+              <div className="px-6 py-5">
+                {/* Metadata (Tanggal, Kategori, Jenis) */}
+                <div className="grid grid-cols-[80px_1fr] gap-y-2 text-sm text-slate-500 mb-6 font-medium">
+                  <div>No. Ref</div>
+                  <div className="text-right font-bold text-slate-800 font-mono-num">{viewDetail?.id?.slice(0, 8).toUpperCase() || "-"}</div>
+
+                  <div>Tanggal</div>
+                  <div className="text-right font-bold text-slate-800">{viewDetail ? formatTanggal(viewDetail.tanggal) : "-"}</div>
+
+                  <div>Kategori</div>
+                  <div className="text-right font-bold text-slate-800">{viewDetail?.kategori}</div>
+
+                  <div>Jenis</div>
+                  <div className="text-right font-bold text-slate-800">{viewDetail?.jenis}</div>
+                </div>
+
+                {/* Dotted Separator */}
+                <div className="border-b-2 border-dashed border-slate-100 mb-4"></div>
+
+                {/* Transaction Title / Keterangan */}
+                {linkedSale ? (
+                  <div className="mb-2">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="py-2 text-left font-medium">Produk</th>
+                          <th className="py-2 text-right font-medium">Qty</th>
+                          <th className="py-2 text-right font-medium">Harga</th>
+                          <th className="py-2 text-right font-medium">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        <tr>
+                          <td className="py-3 text-slate-700 font-medium truncate max-w-[120px]">{linkedSale.nama}</td>
+                          <td className="py-3 text-right text-slate-600">{linkedSale.qty}</td>
+                          <td className="py-3 text-right text-slate-600">{formatRupiah(linkedSale.harga_satuan)}</td>
+                          <td className="py-3 text-right text-slate-800 font-semibold font-mono-num">{formatRupiah(linkedSale.harga_satuan * linkedSale.qty)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    {linkedSale.diskon > 0 && (
+                      <div className="flex justify-between items-center text-sm py-2 border-b border-slate-50">
+                        <span className="text-slate-500">Diskon</span>
+                        <span className="text-red-500 font-medium font-mono-num">- {formatRupiah(linkedSale.diskon)}</span>
+                      </div>
+                    )}
+                    {viewDetail?.keterangan_tambahan && (
+                      <p className="mt-3 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg leading-relaxed mix-blend-multiply">
+                        {viewDetail.keterangan_tambahan}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">KETERANGAN</span>
+                    <p className="font-semibold text-slate-700 leading-snug">{viewDetail?.keterangan}</p>
+                    {viewDetail?.keterangan_tambahan && (
+                      <p className="mt-1 text-sm text-slate-500 bg-slate-50 p-2 rounded-lg leading-relaxed mix-blend-multiply">
+                        {viewDetail.keterangan_tambahan}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Grand Total Area (Green/Red like Nota) */}
+              <div className={`px-6 py-4 flex items-center justify-between ${viewDetail?.kategori === "Pemasukan" ? "bg-emerald-50" : "bg-red-50"}`}>
+                <span className={`text-xs font-bold tracking-widest uppercase ${viewDetail?.kategori === "Pemasukan" ? "text-emerald-700" : "text-red-700"}`}>
+                  TOTAL
+                </span>
+                <span className={`font-mono-num text-xl font-black ${viewDetail?.kategori === "Pemasukan" ? "text-emerald-700" : "text-red-700"}`}>
+                  {viewDetail?.kategori === "Pemasukan" ? "+" : "-"}{viewDetail && formatRupiah(viewDetail.nominal)}
+                </span>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 };
