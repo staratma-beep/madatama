@@ -100,6 +100,9 @@ class Settings(BaseModel):
     alamat: str = ""
     telepon: str = ""
     logo: str = ""
+    app_theme: str = "indigo"
+    sidebar_config: Optional[list] = None
+    tab_names: Optional[dict] = None
 
 
 DEFAULT_FIXED_COSTS = [
@@ -344,10 +347,12 @@ async def settle_record(rid: str):
     sale = await db.sales.find_one({"piutang_record_id": rid}, {"_id": 0})
     if sale:
         await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": False, "piutang_lunas": True}})
+        po_id = sale.get("public_order_id")
+        if po_id:
+            await db.public_orders.update_one({"id": po_id}, {"$set": {"payment_status": "Lunas"}})
         
     await add_log("Pelunasan", f"Berhasil melunasi {rec['jenis']} dari {rec['nama']} lunas sejumlah {rec['nominal']}")
     return rec
-
 
 @api_router.post("/records/{rid}/unsettle", response_model=Record)
 async def unsettle_record(rid: str):
@@ -363,6 +368,9 @@ async def unsettle_record(rid: str):
     sale = await db.sales.find_one({"piutang_record_id": rid}, {"_id": 0})
     if sale:
         await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": True, "piutang_lunas": False}})
+        po_id = sale.get("public_order_id")
+        if po_id:
+            await db.public_orders.update_one({"id": po_id}, {"$set": {"payment_status": "Menunggu Pembayaran"}})
         
     return rec
 
@@ -563,13 +571,30 @@ async def update_sale_status(sid: str, payload: dict):
     new_status = payload.get("status_produksi")
     if not new_status:
         raise HTTPException(400, "status_produksi required")
+        
+    sale_before = await db.sales.find_one({"id": sid}, {"_id": 0})
+    if not sale_before:
+        raise HTTPException(404, "Sale not found")
+        
     await db.sales.update_one({"id": sid}, {"$set": {"status_produksi": new_status}})
     
     sale = await db.sales.find_one({"id": sid}, {"_id": 0})
     if sale:
         await add_log("Produksi", f"Status pesanan {sale['nota_no']} diubah menjadi {new_status}")
+        
+        po_id = sale.get("public_order_id")
+        if po_id:
+            all_sales = await db.sales.find({"public_order_id": po_id}).to_list(100)
+            if all_sales:
+                all_selesai = True
+                for s in all_sales:
+                    if s.get("status_produksi") != "Selesai":
+                        all_selesai = False
+                        break
+                po_status = "Selesai" if all_selesai else "Diterima (Sedang Diproses)"
+                await db.public_orders.update_one({"id": po_id}, {"$set": {"status": po_status}})
+                
     return {"ok": True, "status_produksi": new_status}
-
 
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)
@@ -802,9 +827,26 @@ async def get_admin_public_orders():
             o["product"] = product
     return orders
 
-@api_router.delete("/public-orders/{order_id}")
+@api_router.post("/public-orders/{order_id}/accept")
 async def resolve_public_order(order_id: str):
     await db.public_orders.update_one({"id": order_id}, {"$set": {"status": "Diterima (Sedang Diproses)"}})
+    return {"ok": True}
+
+@api_router.delete("/public-orders/{order_id}/hard")
+async def delete_public_order(order_id: str):
+    # cascade delete associated sales
+    sales = await db.sales.find({"public_order_id": order_id}).to_list(100)
+    for s in sales:
+        await delete_sale(s["id"])
+        
+    # hard delete the public order
+    await db.public_orders.delete_one({"id": order_id})
+    return {"ok": True}
+
+@api_router.put("/public-orders/{order_id}")
+async def edit_public_order(order_id: str, payload: dict):
+    # payload can contain fields to update
+    await db.public_orders.update_one({"id": order_id}, {"$set": payload})
     return {"ok": True}
 
 @api_router.post("/public-orders/{order_id}/confirm-payment")

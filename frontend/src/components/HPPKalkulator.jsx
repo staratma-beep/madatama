@@ -471,53 +471,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
         )}
       </div>
 
-      {/* Riwayat Nota */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="riwayat-nota">
-        <div className="mb-3 flex items-center gap-2">
-          <ReceiptText size={18} className="text-indigo-500" />
-          <h3 className="font-heading text-base font-bold text-slate-900">Riwayat Nota Penjualan</h3>
-          {sales.length > 0 && (
-            <div className="ml-auto flex gap-2">
-              <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => { setReportMonth(saleMonths[0] || curMonth); setReportOpen(true); }} data-testid="report-pdf-btn">
-                <FileText size={14} /> Rekap PDF
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => exportSalesCSV(sales)} data-testid="export-sales-btn">
-                <Download size={14} /> CSV
-              </Button>
-            </div>
-          )}
-          <span className="text-xs text-slate-400 ml-1">{sales.length} nota</span>
-        </div>
-        {sales.length === 0 ? (
-          <p className="py-4 text-center text-sm text-slate-400">Belum ada nota. Nota dibuat otomatis saat menekan Jual.</p>
-        ) : (
-          <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
-            {[...sales].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 hover:bg-white transition-colors" data-testid={`nota-row-${s.id}`}>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{s.nota_no} · {s.nama} <span className="font-normal text-slate-500">×{s.qty}</span></p>
-                  <p className="truncate text-xs text-slate-400">
-                    {formatTanggal(s.tanggal)}{s.pembeli ? ` · ${s.pembeli}` : ""}{s.diskon ? ` · -${formatRupiah(s.diskon)}` : ""}
-                    {s.is_dp && <span className="ml-2 font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200">DP (Sisa {formatRupiah(s.total - s.dp_amount)})</span>}
-                  </p>
-                </div>
-                <div className="text-right hidden sm:block">
-                  <p className="font-mono-num text-sm font-bold text-emerald-600">{formatRupiah(s.total)}</p>
-                  {(s.laba > 0) && <p className="text-xs text-slate-400 font-mono-num">laba {formatRupiah(s.laba)}</p>}
-                </div>
-                <div className="sm:hidden font-mono-num text-sm font-bold text-emerald-600">{formatRupiah(s.total)}</div>
 
-                <div className="flex gap-1 flex-wrap sm:flex-nowrap">
-                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadNota(s, profile)} title="Nota Kecil"><FileText size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">Nota</span></Button>
-                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={() => downloadInvoice(s, profile)} title="Invoice A4"><FileSpreadsheet size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">Invoice</span></Button>
-                  <Button size="sm" variant="outline" className="h-8 px-2 flex-none" onClick={() => downloadSuratJalan(s, profile)} title="Surat Jalan"><Truck size={14} className="mr-0 sm:mr-1" /> <span className="hidden sm:inline">S.Jalan</span></Button>
-                  <button onClick={() => setNotaDel(s)} className="text-slate-300 hover:text-red-500 flex-none ml-1 px-1" data-testid={`nota-delete-${s.id}`}><Trash2 size={15} /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Tabs Produk per Kategori */}
       <Tabs value={tab} onValueChange={setTab}>

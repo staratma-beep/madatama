@@ -66,22 +66,6 @@ function download(filename, content, type) {
 export const Toolbar = ({ transactions, saldoAwal, onReload }) => {
   const csvRef = useRef();
   const jsonRef = useRef();
-  const logoRef = useRef();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [cfg, setCfg] = useState({ saldo_awal: "0", nama_usaha: "", alamat: "", telepon: "", logo: "" });
-
-  useEffect(() => {
-    if (settingsOpen) {
-      api.getSettings().then((s) => setCfg({
-        saldo_awal: formatNumberInput(String(s.saldo_awal || 0)),
-        nama_usaha: s.nama_usaha || "",
-        alamat: s.alamat || "",
-        telepon: s.telepon || "",
-        logo: s.logo || "",
-      }));
-    }
-  }, [settingsOpen]);
-
   const exportCSV = () => {
     download(`buku-kas-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(transactions), "text/csv;charset=utf-8;");
     toast.success("Data diekspor ke CSV");
@@ -117,81 +101,10 @@ export const Toolbar = ({ transactions, saldoAwal, onReload }) => {
     e.target.value = "";
   };
 
-  const saveSettings = async () => {
-    await api.updateSettings({
-      saldo_awal: parseNumber(cfg.saldo_awal),
-      nama_usaha: cfg.nama_usaha,
-      alamat: cfg.alamat,
-      telepon: cfg.telepon,
-      logo: cfg.logo,
-    });
-    toast.success("Pengaturan disimpan");
-    setSettingsOpen(false);
-    onReload();
-  };
-
-  const onLogo = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    if (file.size > 500 * 1024) { toast.error("Logo maksimal 500KB"); e.target.value = ""; return; }
-    const reader = new FileReader();
-    reader.onload = () => setCfg((c) => ({ ...c, logo: reader.result }));
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
   return (
     <div className="flex items-center gap-2">
       <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={importCSV} data-testid="import-csv-input" />
       <input ref={jsonRef} type="file" accept=".json" className="hidden" onChange={restoreJSON} data-testid="restore-json-input" />
-      <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} data-testid="logo-input" />
-
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5" data-testid="settings-btn">
-            <Settings size={15} /> <span className="hidden sm:inline">Pengaturan</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-heading">Pengaturan</DialogTitle>
-            <DialogDescription>Saldo awal & profil usaha (tampil di nota).</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label>Saldo Kas Awal (Rp)</Label>
-              <Input inputMode="numeric" value={cfg.saldo_awal} onChange={(e) => setCfg({ ...cfg, saldo_awal: formatNumberInput(e.target.value) })} data-testid="saldo-awal-input" />
-            </div>
-            <div className="border-t pt-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Profil Usaha (untuk Nota)</p>
-              <div className="mb-3 flex items-center gap-3">
-                <div className="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-xl border bg-slate-50">
-                  {cfg.logo ? <img src={cfg.logo} alt="logo" className="h-full w-full object-contain" data-testid="logo-preview" /> : <ImageIcon size={22} className="text-slate-300" />}
-                </div>
-                <div className="flex flex-col items-start gap-1">
-                  <Button type="button" variant="outline" size="sm" onClick={() => logoRef.current?.click()} data-testid="upload-logo-btn"><Upload size={14} className="mr-1" />Unggah Logo</Button>
-                  {cfg.logo && <Button type="button" variant="ghost" size="sm" className="h-7 text-red-500" onClick={() => setCfg({ ...cfg, logo: "" })} data-testid="remove-logo-btn">Hapus logo</Button>}
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label>Nama Usaha</Label>
-              <Input value={cfg.nama_usaha} onChange={(e) => setCfg({ ...cfg, nama_usaha: e.target.value })} placeholder="Bukuku Pro" data-testid="nama-usaha-input" />
-            </div>
-            <div>
-              <Label>Alamat</Label>
-              <Input value={cfg.alamat} onChange={(e) => setCfg({ ...cfg, alamat: e.target.value })} placeholder="Jl. ..." data-testid="alamat-input" />
-            </div>
-            <div>
-              <Label>Telepon</Label>
-              <Input value={cfg.telepon} onChange={(e) => setCfg({ ...cfg, telepon: e.target.value })} placeholder="08xx-xxxx-xxxx" data-testid="telepon-input" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsOpen(false)}>Batal</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={saveSettings} data-testid="save-settings-btn">Simpan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

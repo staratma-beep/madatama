@@ -19,11 +19,16 @@ import { WebOrders } from "@/components/WebOrders";
 import { WebOrdersTab } from "@/components/WebOrdersTab";
 import { WebSettingsTab } from "@/components/WebSettingsTab";
 import { Sidebar } from "@/components/Sidebar";
+import { ThemeSettingsTab } from "@/components/ThemeSettingsTab";
+import { RiwayatNota } from "@/components/RiwayatNota";
+import { THEME_COLORS } from "@/lib/theme";
 import { Toaster, toast } from "sonner";
-import { LogOut } from "lucide-react";
 import {
-  Printer, BookText, CalendarRange, PieChart, HandCoins,
-  Plus, Calculator, AlertTriangle, TrendingUp, Layers, History, Globe, ShoppingCart
+  LogOut, LayoutDashboard, BookText, Calculator, PieChart, HandCoins, Package, Coins,
+  History, BookOpen, Settings, Store, UserRoundCog, PlusCircle, Search, CalendarRange,
+  Menu, X, ChevronRight, CheckCircle2, TrendingUp, Filter, WalletCards, Briefcase,
+  ShoppingBag, BellRing, Layers, Globe, Settings as SettingsIcon, ShoppingCart, ReceiptText,
+  Printer, Plus, AlertTriangle
 } from "lucide-react";
 
 function App() {
@@ -48,7 +53,7 @@ function App() {
   const handleLogin = (u) => {
     localStorage.setItem("madatama_user", JSON.stringify(u));
     setAuthUser(u);
-    setTab(u.role === "Produksi" ? "produksi" : (u.role === "Kasir" ? "hpp" : "kas"));
+    setTab(u.role === "Produksi" ? "produksi" : "dashboard");
   };
 
   const handleLogout = () => {
@@ -103,9 +108,27 @@ function App() {
     reload();
   };
   const createRecord = async (d) => { await api.createRecord(d); toast.success("Catatan ditambahkan"); reload(); };
-  const settleRecord = async (id) => { await api.settleRecord(id); toast.success("Ditandai lunas & tercatat di kas"); reload(); };
+  const settleRecord = async (idOrIds) => {
+    if (Array.isArray(idOrIds)) {
+      await Promise.all(idOrIds.map(id => api.settleRecord(id)));
+      toast.success(`${idOrIds.length} tagihan ditandai lunas`);
+    } else {
+      await api.settleRecord(idOrIds);
+      toast.success("Ditandai lunas & tercatat di kas");
+    }
+    reload();
+  };
   const unsettleRecord = async (id) => { await api.unsettleRecord(id); toast.success("Status dikembalikan"); reload(); };
-  const deleteRecord = async (id) => { await api.deleteRecord(id); toast.success("Catatan dihapus"); reload(); };
+  const deleteRecord = async (idOrIds) => {
+    if (Array.isArray(idOrIds)) {
+      await Promise.all(idOrIds.map(id => api.deleteRecord(id)));
+      toast.success(`${idOrIds.length} catatan dihapus`);
+    } else {
+      await api.deleteRecord(idOrIds);
+      toast.success("Catatan dihapus");
+    }
+    reload();
+  };
 
   const markShared = async (d) => {
     const { bulan, laba_bersih, bagian_pemilik, bagian_pengelola } = d;
@@ -150,21 +173,25 @@ function App() {
     reload();
   };
 
+
   const allTabs = [
-    { key: "pesanan-web", label: "Pesanan Web", icon: ShoppingCart },
-    { key: "kas", label: "Buku Kas", icon: BookText },
-    { key: "hpp", label: "Kalkulator HPP", icon: Calculator },
-    { key: "produksi", label: "Produksi", icon: Layers },
-    { key: "web", label: "Eksterior Web", icon: Globe },
-    { key: "rekap", label: "Rekap Bulanan", icon: CalendarRange },
-    { key: "labarugi", label: "Laba Rugi & Bagi Hasil", icon: PieChart },
-    { key: "piutang", label: "Piutang & Utang", icon: HandCoins },
-    { key: "log", label: "Log Aktivitas", icon: History },
+    { key: "dashboard", label: settings?.tab_names?.["dashboard"] || "Dashboard Utama", icon: LayoutDashboard },
+    { key: "pesanan-web", label: settings?.tab_names?.["pesanan-web"] || "Pesanan Web", icon: ShoppingCart },
+    { key: "kas", label: settings?.tab_names?.["kas"] || "Buku Kas", icon: BookText },
+    { key: "hpp", label: settings?.tab_names?.["hpp"] || "Kalkulator & Kasir", icon: Calculator },
+    { key: "produksi", label: settings?.tab_names?.["produksi"] || "Produksi", icon: Layers },
+    { key: "riwayat-nota", label: settings?.tab_names?.["riwayat-nota"] || "Riwayat Penjualan", icon: ReceiptText },
+    { key: "web", label: settings?.tab_names?.["web"] || "Eksterior Web", icon: Globe },
+    { key: "rekap", label: settings?.tab_names?.["rekap"] || "Rekap Bulanan", icon: CalendarRange },
+    { key: "labarugi", label: settings?.tab_names?.["labarugi"] || "Laba Rugi & Bagi Hasil", icon: PieChart },
+    { key: "piutang", label: settings?.tab_names?.["piutang"] || "Piutang & Utang", icon: HandCoins },
+    { key: "log", label: settings?.tab_names?.["log"] || "Log Aktivitas", icon: History },
+    { key: "theme-settings", label: settings?.tab_names?.["theme-settings"] || "Tampilan & Menu", icon: SettingsIcon },
   ];
 
   const tabs = allTabs.filter(t => {
     if (authUser?.role === "Owner") return true;
-    if (authUser?.role === "Kasir") return ["pesanan-web", "hpp", "kas", "produksi", "piutang", "web"].includes(t.key);
+    if (authUser?.role === "Kasir") return ["dashboard", "pesanan-web", "hpp", "kas", "produksi", "riwayat-nota", "piutang", "web", "theme-settings"].includes(t.key);
     if (authUser?.role === "Produksi") return ["produksi"].includes(t.key);
     return false;
   });
@@ -184,6 +211,8 @@ function App() {
         onSelectTab={setTab}
         tabs={tabs}
         authUser={authUser}
+        sidebarConfig={settings?.sidebar_config}
+        appTheme={settings?.app_theme}
       />
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
@@ -225,7 +254,7 @@ function App() {
                   <Globe size={12} />
                   Buka Web
                 </a>
-                <WebOrders onAccepted={reload} />
+                <WebOrders onAccepted={reload} onNavigate={() => setTab("pesanan-web")} />
                 <div className="text-right hidden md:block">
                   <p className="text-sm font-bold text-slate-700 leading-tight">{authUser?.name}</p>
                   <p className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">{authUser?.role}</p>
@@ -244,32 +273,7 @@ function App() {
 
         <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 
-          {/* ===== DASHBOARD CARDS ===== */}
-          {authUser?.role !== "Produksi" && (
-            <Dashboard
-              cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
-              piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
-            />
-          )}
-
-          {/* ===== LOW STOCK ALERT ===== */}
-          {lowStock.length > 0 && authUser?.role !== "Produksi" && (
-            <div
-              className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-5 py-4 border border-amber-200 shadow-sm cursor-pointer hover:bg-amber-100 transition-colors"
-              onClick={() => { setTab("hpp"); window.scrollTo({ top: 300, behavior: "smooth" }); }}
-              data-testid="low-stock-alert"
-            >
-              <div className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-amber-100">
-                <AlertTriangle size={16} className="text-amber-600" />
-              </div>
-              <div className="text-sm text-amber-800">
-                <span className="font-bold">Stok menipis ({lowStock.length} produk):</span>{" "}
-                {lowStock.slice(0, 8).map((p) => `${p.nama} (${p.stok ?? 0})`).join(", ")}
-                {lowStock.length > 8 ? ", …" : ""}
-                <span className="ml-1 text-amber-600 font-medium">— segera restok di tab Kalkulator HPP.</span>
-              </div>
-            </div>
-          )}
+          {/* ===== DASHBOARD SECTION MOVED INSIDE TABS ===== */}
 
           {/* ===== FIXED COSTS BAR ===== */}
           {tab === "kas" && authUser?.role === "Owner" && (
@@ -280,6 +284,14 @@ function App() {
           <div className="rounded-2xl border border-indigo-100/60 bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
             {/* Tab Content */}
             <div className="p-5 overflow-x-auto">
+              {tab === "dashboard" && authUser?.role !== "Produksi" && (
+                <Dashboard
+                  cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
+                  piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
+                  lowStock={lowStock} onNavigateTab={setTab} recentTransactions={transactions}
+                  sales={sales}
+                />
+              )}
               {tab === "kas" && authUser?.role !== "Produksi" && (
                 <BukuKas
                   transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance} profile={settings} sales={sales}
@@ -297,9 +309,11 @@ function App() {
               {tab === "produksi" && (
                 <Produksi sales={sales} onStatusChange={api.updateSaleStatus} onUpdated={reload} role={authUser?.role} />
               )}
+              {tab === "riwayat-nota" && <RiwayatNota onSaleUpdate={reload} />}
               {tab === "log" && authUser?.role === "Owner" && <LogAktivitas />}
               {tab === "pesanan-web" && <WebOrdersTab onAccepted={reload} />}
               {tab === "web" && <WebSettingsTab />}
+              {tab === "theme-settings" && <ThemeSettingsTab />}
             </div>
           </div>
         </main>
@@ -310,8 +324,8 @@ function App() {
       {/* FAB mobile */}
       <button
         onClick={handleAdd}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full p-4 text-white shadow-2xl transition-all duration-200 hover:scale-110 active:scale-95 md:hidden"
-        style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", boxShadow: "0 8px 30px rgba(79,70,229,0.4)" }}
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full p-4 text-white shadow-2xl transition-all duration-200 hover:scale-110 active:scale-95 md:hidden bg-gradient-to-br ${THEME_COLORS[settings?.app_theme || "indigo"]?.gradient || "from-indigo-600 to-indigo-400"}`}
+        style={{ boxShadow: "0 8px 30px rgba(0,0,0,0.15)" }}
         data-testid="fab-add-transaction"
         aria-label="Tambah transaksi"
       >
