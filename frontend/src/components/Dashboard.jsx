@@ -1,6 +1,7 @@
 import React from "react";
 import { formatRupiah, monthLabel } from "../lib/format";
-import { Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, Boxes, AlertTriangle, PlusCircle, ShoppingCart, Calculator } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, Boxes, AlertTriangle, PlusCircle, ShoppingCart, Calculator, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const StatCard = ({ title, value, sub, icon: Icon, gradient, glow, testId, delay = 0 }) => (
   <div
@@ -26,7 +27,7 @@ const StatCard = ({ title, value, sub, icon: Icon, gradient, glow, testId, delay
 );
 
 export const Dashboard = ({
-  cashBalance, monthProfit, currentMonthKey, piutang, utang, labaProduk,
+  cashBalance, monthProfit, currentMonthKey, piutang, utang, labaProduk, omzet,
   lowStock = [], onNavigateTab, recentTransactions = [], sales = []
 }) => {
   const currentMonthSales = sales.filter((s) => s.tanggal && s.tanggal.startsWith(currentMonthKey));
@@ -47,10 +48,44 @@ export const Dashboard = ({
   const maxQty = Math.max(...topSold.map(p => p.qty), 1);
   const maxProfit = Math.max(...topProfit.map(p => p.profit), 1);
 
+  // Data Grafik Bulanan
+  const [yr, mo] = currentMonthKey.split("-");
+  const daysInMonth = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+  const rawDailyData = Array.from({ length: daysInMonth }, (_, i) => ({
+    name: String(i + 1).padStart(2, "0"),
+    Pemasukan: 0,
+    Pengeluaran: 0
+  }));
+
+  const thisMonthTrx = recentTransactions.filter(trx => trx.tanggal && trx.tanggal.startsWith(currentMonthKey));
+  thisMonthTrx.forEach(trx => {
+    const day = parseInt(trx.tanggal.split("-")[2], 10);
+    if (!isNaN(day) && day >= 1 && day <= daysInMonth) {
+      if (trx.kategori === 'Pemasukan') rawDailyData[day - 1].Pemasukan += trx.nominal || 0;
+      if (trx.kategori === 'Pengeluaran') rawDailyData[day - 1].Pengeluaran += trx.nominal || 0;
+    }
+  });
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-xl">
+          <p className="font-bold text-slate-700 mb-1">{`Tanggal ${label} ${monthLabel(currentMonthKey)}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="text-sm font-medium" style={{ color: entry.color }}>
+              {entry.name}: {formatRupiah(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       {/* Cards Section */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         <StatCard
           title="Saldo Kas Saat Ini"
           value={cashBalance}
@@ -62,14 +97,24 @@ export const Dashboard = ({
           delay={0}
         />
         <StatCard
-          title={`Laba ${monthLabel(currentMonthKey)}`}
+          title={`Omzet ${monthLabel(currentMonthKey).split(" ")[0]}`}
+          value={omzet || 0}
+          icon={TrendingUp} // Or another appropriate icon
+          gradient="from-blue-500 to-cyan-600"
+          glow="shadow-blue-200"
+          sub="Total pendapatan kotor bulan ini"
+          testId="card-omzet-bulan"
+          delay={1}
+        />
+        <StatCard
+          title={`Laba Bersih ${monthLabel(currentMonthKey).split(" ")[0]}`}
           value={monthProfit}
           icon={monthProfit >= 0 ? TrendingUp : TrendingDown}
           gradient={monthProfit >= 0 ? "from-emerald-500 to-teal-600" : "from-red-500 to-rose-600"}
           glow={monthProfit >= 0 ? "shadow-emerald-200" : "shadow-red-200"}
-          sub={monthProfit >= 0 ? "Untung bulan berjalan" : "Rugi bulan berjalan"}
+          sub={monthProfit >= 0 ? "Laba bersih operasional" : "Rugi operasional"}
           testId="card-laba-bulan"
-          delay={1}
+          delay={2}
         />
         <StatCard
           title="Piutang Belum Lunas"
@@ -79,7 +124,7 @@ export const Dashboard = ({
           glow="shadow-teal-200"
           sub="Uang yang belum diterima"
           testId="card-piutang"
-          delay={2}
+          delay={3}
         />
         <StatCard
           title="Utang Belum Lunas"
@@ -89,7 +134,7 @@ export const Dashboard = ({
           glow="shadow-amber-200"
           sub="Kewajiban yang belum dibayar"
           testId="card-utang"
-          delay={3}
+          delay={4}
         />
         <StatCard
           title={`Laba Produk ${monthLabel(currentMonthKey).split(" ")[0]}`}
@@ -99,7 +144,7 @@ export const Dashboard = ({
           glow="shadow-fuchsia-200"
           sub="Laba kotor penjualan produk"
           testId="card-laba-produk"
-          delay={4}
+          delay={5}
         />
       </div>
 
@@ -172,6 +217,39 @@ export const Dashboard = ({
               Belum ada aktivitas yang tercatat.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Monthly Chart Section */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm overflow-hidden">
+        <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 text-lg">
+          <BarChart3 size={22} className="text-indigo-500" /> Grafik Arus Kas Bulan Ini — {monthLabel(currentMonthKey)}
+        </h3>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={rawDailyData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 12, fill: "#64748b", fontWeight: 500 }}
+                tickLine={false}
+                axisLine={false}
+                dy={10}
+              />
+              <YAxis
+                tick={{ fontSize: 12, fill: "#64748b", fontWeight: 500 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `Rp${(value / 1000).toLocaleString('id-ID')}k`}
+                width={80}
+                dx={-10}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9' }} />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
+              <Bar dataKey="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="Pengeluaran" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

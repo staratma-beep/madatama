@@ -76,10 +76,17 @@ function App() {
 
   const cashBalance = useMemo(() => computeCashBalance(transactions, saldoAwal), [transactions, saldoAwal]);
   const curMonth = monthKey(todayISO());
-  const monthProfit = useMemo(() => monthDetail(transactions, curMonth).laba, [transactions, curMonth]);
+  const labaProduk = useMemo(() => sales.filter((s) => monthKey(s.tanggal) === curMonth).reduce((a, s) => a + (s.laba || 0), 0), [sales, curMonth]);
+  const omzet = useMemo(() => sales.filter((s) => monthKey(s.tanggal) === curMonth).reduce((a, s) => a + (s.total || 0), 0), [sales, curMonth]);
+
+  const monthProfit = useMemo(() => {
+    const curDetail = monthDetail(transactions, curMonth);
+    const opex = (curDetail.pengeluaran || 0) - (curDetail.bahanMitra || 0);
+    return labaProduk - opex;
+  }, [transactions, curMonth, labaProduk]);
+
   const totalPiutang = useMemo(() => records.filter((r) => r.jenis === "Piutang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const totalUtang = useMemo(() => records.filter((r) => r.jenis === "Utang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
-  const labaProduk = useMemo(() => sales.filter((s) => monthKey(s.tanggal) === curMonth).reduce((a, s) => a + (s.laba || 0), 0), [sales, curMonth]);
   const lowStock = useMemo(() => products.filter((p) => (p.harga_jual || 0) > 0 && (p.stok ?? 0) <= 5).sort((a, b) => (a.stok || 0) - (b.stok || 0)), [products]);
 
   const handleAdd = () => { setEditing(null); setDialogOpen(true); };
@@ -287,7 +294,7 @@ function App() {
               {tab === "dashboard" && authUser?.role !== "Produksi" && (
                 <Dashboard
                   cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
-                  piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk}
+                  piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk} omzet={omzet}
                   lowStock={lowStock} onNavigateTab={setTab} recentTransactions={transactions}
                   sales={sales}
                 />
@@ -301,7 +308,7 @@ function App() {
               {tab === "hpp" && authUser?.role !== "Produksi" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} role={authUser?.role} />}
               {tab === "rekap" && authUser?.role === "Owner" && <RekapBulanan transactions={transactions} />}
               {tab === "labarugi" && authUser?.role === "Owner" && (
-                <LabaRugi transactions={transactions} profitShares={profitShares} onMarkShared={markShared} onUnmarkShared={unmarkShared} />
+                <LabaRugi transactions={transactions} sales={sales} profitShares={profitShares} onMarkShared={markShared} onUnmarkShared={unmarkShared} />
               )}
               {tab === "piutang" && authUser?.role !== "Produksi" && (
                 <PiutangUtang records={records} onCreate={createRecord} onSettle={settleRecord} onUnsettle={unsettleRecord} onDelete={deleteRecord} />

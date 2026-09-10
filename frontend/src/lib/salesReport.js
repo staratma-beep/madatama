@@ -6,8 +6,9 @@ export function buildReportHTML(sales, profile = {}, mkey) {
     .sort((a, b) => (a.tanggal < b.tanggal ? -1 : 1));
   const omzet = items.reduce((a, s) => a + s.total, 0);
   const diskon = items.reduce((a, s) => a + (s.diskon || 0), 0);
-  const laba = items.reduce((a, s) => a + s.laba, 0);
-  const qtyTotal = items.reduce((a, s) => a + s.qty, 0);
+  const laba = items.reduce((a, s) => a + (s.laba || 0), 0);
+  const qtyTotal = items.reduce((a, s) => a + (s.qty || 0), 0);
+  const hppTotal = omzet - laba;
 
   const cat = {};
   items.forEach((s) => { cat[s.kategori] = (cat[s.kategori] || 0) + s.total; });
@@ -26,7 +27,8 @@ export function buildReportHTML(sales, profile = {}, mkey) {
       <td class="r">${s.qty}</td>
       <td class="r">${s.diskon ? formatRupiah(s.diskon) : "-"}</td>
       <td class="r">${formatRupiah(s.total)}</td>
-      <td class="r">${formatRupiah(s.laba)}</td>
+      <td class="r" style="color: #64748b;">${formatRupiah(s.total - (s.laba || 0))}</td>
+      <td class="r" style="color: #047857; font-weight: bold;">${formatRupiah(s.laba || 0)}</td>
       <td>${s.pembeli || "-"}</td>
     </tr>`).join("");
 
@@ -73,13 +75,14 @@ export function buildReportHTML(sales, profile = {}, mkey) {
     <div class="summary">
       <div class="box"><span>Total Omzet</span><b>${formatRupiah(omzet)}</b></div>
       <div class="box"><span>Total Diskon</span><b>${formatRupiah(diskon)}</b></div>
-      <div class="box green"><span>Laba Kotor</span><b>${formatRupiah(laba)}</b></div>
+      <div class="box"><span>Total HPP (Modal)</span><b style="color: #e11d48;">${formatRupiah(hppTotal)}</b></div>
+      <div class="box green"><span>Laba Kotor</span><b style="color: #047857;">${formatRupiah(laba)}</b></div>
     </div>
     ${catRows ? `<div class="chips">${catRows}</div>` : ``}
     <table>
-      <thead><tr><th>#</th><th>Tanggal</th><th>No Nota</th><th>Produk</th><th class="r">Qty</th><th class="r">Diskon</th><th class="r">Total</th><th class="r">Laba</th><th>Pembeli</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px">Tidak ada penjualan bulan ini</td></tr>`}</tbody>
-      <tfoot><tr><td colspan="6" class="r">TOTAL</td><td class="r">${formatRupiah(omzet)}</td><td class="r">${formatRupiah(laba)}</td><td></td></tr></tfoot>
+      <thead><tr><th>#</th><th>Tanggal</th><th>No Nota</th><th>Produk</th><th class="r">Qty</th><th class="r">Diskon</th><th class="r">Total Akhir</th><th class="r">HPP (Modal)</th><th class="r">Laba Kotor</th><th>Pembeli</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:24px">Tidak ada penjualan bulan ini</td></tr>`}</tbody>
+      <tfoot><tr><td colspan="6" class="r">TOTAL</td><td class="r">${formatRupiah(omzet)}</td><td class="r">${formatRupiah(hppTotal)}</td><td class="r">${formatRupiah(laba)}</td><td></td></tr></tfoot>
     </table>
     <div class="foot">Dicetak dari ${bn} • ${monthLabel(mkey)}</div>
   </div>

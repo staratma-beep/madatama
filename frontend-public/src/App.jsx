@@ -81,6 +81,8 @@ const Catalog = ({ cart, setCart }) => {
   const [activeKategori, setActiveKategori] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [cardQtys, setCardQtys] = useState({});
+
   useEffect(() => {
     Promise.all([getPublicProducts(), getPublicSettings()]).then(([prodData, setSettingsData]) => {
       setProducts(prodData);
@@ -97,16 +99,19 @@ const Catalog = ({ cart, setCart }) => {
   });
 
   const addToCart = (p) => {
+    const qtyToAdd = cardQtys[p.id] || 1;
     setCart(curr => {
       const exist = curr.find(x => x.product_id === p.id);
       if (exist) {
-        return curr.map(x => x.product_id === p.id ? { ...x, qty: x.qty + 1 } : x);
+        return curr.map(x => x.product_id === p.id ? { ...x, qty: x.qty + qtyToAdd } : x);
       }
-      return [...curr, { product_id: p.id, product: p, qty: 1, catatan: "" }];
+      return [...curr, { product_id: p.id, product: p, qty: qtyToAdd, catatan: "" }];
     });
-    toast.success(`${p.nama} ditambahkan ke Keranjang`, {
+    toast.success(`${qtyToAdd}x ${p.nama} ditambahkan ke Keranjang`, {
       icon: <CheckCircle2 className="text-emerald-500" size={18} />
     });
+    // Reset qty after add
+    setCardQtys(prev => ({ ...prev, [p.id]: 1 }));
   };
 
   const getGradientClass = (theme) => {
@@ -208,18 +213,40 @@ const Catalog = ({ cart, setCart }) => {
               <div className="p-5 flex flex-col flex-1">
                 <h3 className="font-bold text-lg text-slate-900 mb-1">{p.nama}</h3>
                 {p.deskripsi && <p className="text-xs text-slate-500 line-clamp-2 mb-3">{p.deskripsi}</p>}
-                <div className="flex items-center gap-1 mt-auto">
+                <div className="flex items-center gap-1 mt-auto pb-4">
                   <span className="text-xs font-semibold text-slate-400">Est.</span>
                   <p className="font-black text-indigo-600 text-lg">{formatRupiah(p.harga_jual)}</p>
                 </div>
-                <button onClick={() => addToCart(p)} className="mt-4 w-full bg-slate-900 hover:bg-indigo-600 text-white font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors group-hover:bg-indigo-600 shadow-sm">
-                  <ShoppingCart size={16} /> Tambah
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex bg-slate-50 border border-slate-200 rounded-xl h-[42px] overflow-hidden">
+                    <button
+                      onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, (prev[p.id] || 1) - 1) }))}
+                      className="w-10 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors font-bold"
+                    >-</button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={cardQtys[p.id] || 1}
+                      onChange={(e) => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                      className="w-full bg-transparent text-center font-bold text-slate-700 border-x border-slate-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: (prev[p.id] || 1) + 1 }))}
+                      className="w-10 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors font-bold"
+                    >+</button>
+                  </div>
+
+                  <button onClick={() => addToCart(p)} className="w-[42px] h-[42px] flex-none bg-slate-900 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-colors group-hover:bg-indigo-600 shadow-sm">
+                    <ShoppingCart size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
     </div>
   );
 };
@@ -277,74 +304,85 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
   const estTotal = cart.reduce((acc, c) => acc + ((c.product?.harga_jual * c.qty) || 0), 0);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link to="/" className="inline-flex items-center gap-2 text-indigo-600 font-semibold mb-6 hover:underline"><ArrowLeft size={16} /> Lanjut Belanja</Link>
+    <div className="max-w-5xl mx-auto px-4 py-12">
+      <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-semibold mb-8 transition-colors"><ArrowLeft size={16} /> Lanjut Belanja</Link>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 space-y-4">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Keranjang Pesanan.</h1>
+      <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Keranjang Anda</h1>
+            <span className="bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-full text-sm">{cart.length} Produk</span>
+          </div>
+
           {cart.length === 0 ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
-              <ShoppingCart size={48} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500 font-medium">Belum ada barang di keranjang.</p>
+            <div className="bg-white border text-center py-20 rounded-3xl shadow-sm border-slate-100">
+              <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingCart size={40} className="text-slate-300" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-700 mb-2">Keranjang Anda masih kosong</h2>
+              <p className="text-slate-500 mb-6">Yuk, mulai cari produk kebutuhan promosi Anda!</p>
+              <Link to="/" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-colors">Mulai Belanja</Link>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {cart.map((item, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-4 shadow-sm relative group">
-                  <div className="w-20 h-20 bg-slate-100 rounded-xl overflow-hidden flex-none">
+                <div key={idx} className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow relative group flex gap-5">
+                  <div className="w-28 h-28 bg-slate-50 rounded-2xl overflow-hidden flex-none border border-slate-100">
                     {item.product?.image_url ?
                       <img src={item.product?.image_url} alt="" className="w-full h-full object-cover" /> :
-                      <div className="w-full h-full grid place-items-center text-slate-300"><Package /></div>
+                      <div className="w-full h-full grid place-items-center text-slate-300"><Package size={32} /></div>
                     }
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-slate-900">{item.product?.nama}</h3>
-                    <p className="text-indigo-600 font-bold text-sm mb-3">{formatRupiah(item.product?.harga_jual)}</p>
+                  <div className="flex-1 flex flex-col justify-between py-1">
+                    <div className="pr-8">
+                      <h3 className="font-bold text-lg text-slate-800 leading-tight mb-1">{item.product?.nama}</h3>
+                      <p className="font-black text-indigo-600">{formatRupiah(item.product?.harga_jual)}</p>
+                    </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-none">
-                        <label className="text-xs font-bold text-slate-500 block mb-1">Jumlah</label>
-                        <input type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} className="w-20 h-9 border border-slate-200 rounded-lg px-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center mt-3">
+                      <div className="flex items-center bg-slate-50 rounded-xl h-10 border border-slate-200">
+                        <button onClick={() => updateItem(idx, 'qty', Math.max(1, item.qty - 1))} className="w-9 h-full flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-l-xl transition-colors">-</button>
+                        <input type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} className="w-12 h-full bg-transparent text-center font-bold text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        <button onClick={() => updateItem(idx, 'qty', item.qty + 1)} className="w-9 h-full flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-r-xl transition-colors">+</button>
                       </div>
-                      <div className="flex-1">
-                        <label className="text-xs font-bold text-slate-500 block mb-1">Catatan / Link Desain Khusus</label>
-                        <input type="text" value={item.catatan} onChange={e => updateItem(idx, 'catatan', e.target.value)} placeholder="Warna biru tua, link gdrive..." className="w-full h-9 border border-slate-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-indigo-500" />
+                      <div className="flex-1 relative">
+                        <input type="text" value={item.catatan} onChange={e => updateItem(idx, 'catatan', e.target.value)} placeholder="Tulis catatan (ukuran, warna, link desain)..." className="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-indigo-500 focus:outline-none text-sm py-2 text-slate-700 font-medium placeholder:font-normal placeholder:text-slate-400 transition-colors" />
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => removeItem(idx)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 p-1.5 rounded-md transition-colors"><Trash2 size={16} /></button>
+                  <button onClick={() => removeItem(idx)} className="absolute top-5 right-5 text-slate-300 hover:text-red-500 bg-white hover:bg-red-50 p-2 rounded-full transition-colors"><Trash2 size={18} /></button>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="w-full lg:w-[350px] flex-none">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm sticky top-24">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Detail Pengirim</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
-                <input required type="text" className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" placeholder="Budi Santoso" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp Aktif</label>
-                <input required type="tel" className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" placeholder="08..." value={formData.kontak} onChange={e => setFormData({ ...formData, kontak: e.target.value })} />
-              </div>
-
-              <div className="border-t border-slate-100 pt-4 mt-6">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold text-slate-500">Estimasi Total</span>
+        <div className="w-full lg:w-[380px] flex-none">
+          <div className="bg-white border border-slate-100 rounded-3xl p-7 shadow-sm sticky top-24">
+            <h2 className="text-xl font-black text-slate-900 mb-6">Ringkasan Belanja</h2>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Detail Pemesan</p>
+                <div>
+                  <input required type="text" className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm" placeholder="Nama Lengkap Pemesan" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} />
                 </div>
-                <div className="text-2xl font-black text-slate-900 mb-6">{formatRupiah(estTotal)}</div>
+                <div>
+                  <input required type="tel" className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm" placeholder="Nomor WhatsApp (Aktif)" value={formData.kontak} onChange={e => setFormData({ ...formData, kontak: e.target.value })} />
+                </div>
+              </div>
 
-                <p className="text-[10px] text-slate-400 mb-4 leading-relaxed">
-                  Harga final dapat disesuaikan oleh admin melalui konsultasi via WhatsApp tergantung dari spesifikasi bahan dan desain.
-                </p>
+              <div className="pt-2">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-bold text-slate-500">Estimasi Total Belanja</span>
+                </div>
+                <div className="text-3xl font-black text-slate-900 mb-4 tracking-tight">{formatRupiah(estTotal)}</div>
 
-                <button type="submit" disabled={loading || cart.length === 0} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50">
-                  {loading ? 'Memproses...' : 'Kirim Pesanan Sekarang'} <ChevronRight size={18} />
+                <div className="bg-indigo-50/50 text-indigo-700/80 p-3 rounded-xl text-[11px] leading-relaxed mb-6 font-medium border border-indigo-100/50">
+                  <span className="font-bold text-indigo-800">Catatan:</span> Harga final (ongkir, penyesuaian desain custom) akan dikonfirmasi oleh Admin via WhatsApp setelah pesanan dikirim.
+                </div>
+
+                <button type="submit" disabled={loading || cart.length === 0} className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 group">
+                  {loading ? 'Memproses Pesanan...' : 'Beli Sekarang'} {!loading && <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                 </button>
               </div>
             </form>

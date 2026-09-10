@@ -43,6 +43,7 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, onSale, editin
   const [openCombobox, setOpenCombobox] = useState(false);
   const [jualIsDp, setJualIsDp] = useState(false);
   const [jualDpAmount, setJualDpAmount] = useState("");
+  const [jualStatus, setJualStatus] = useState("Selesai");
 
   useEffect(() => {
     if (open) {
@@ -66,6 +67,7 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, onSale, editin
         setPembeli("");
         setJualIsDp(false);
         setJualDpAmount("");
+        setJualStatus("Selesai");
       }
     }
   }, [open, editing]);
@@ -82,6 +84,12 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, onSale, editin
   };
 
   const selectedProduct = useMemo(() => products.find((p) => p.id === selProductId), [products, selProductId]);
+
+  useEffect(() => {
+    if (selectedProduct) {
+      setJualStatus(selectedProduct.jenis === "Sendiri" ? "Desain" : "Selesai");
+    }
+  }, [selectedProduct]);
 
   const calcSale = () => {
     if (!selectedProduct) return { harga: 0, hpp: 0, subtotal: 0, diskonRp: 0, total: 0 };
@@ -129,6 +137,7 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, onSale, editin
         tanggal: form.tanggal, // bisa pake tanggal dari form
         is_dp: jualIsDp,
         dp_amount: parseNumber(jualDpAmount) || 0,
+        status_produksi: jualStatus,
       });
     } else {
       const nominal = parseNumber(form.nominalStr);
@@ -364,6 +373,21 @@ export const TransactionDialog = ({ open, onOpenChange, onSubmit, onSale, editin
                       </div>
                     );
                   })()}
+
+                  <div className="mt-3">
+                    <Label className="text-xs text-slate-500 mb-1 block">Status Produksi Awal</Label>
+                    <Select value={jualStatus} onValueChange={setJualStatus}>
+                      <SelectTrigger className="bg-white font-semibold w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Desain">Desain</SelectItem>
+                        <SelectItem value="Cetak">Cetak</SelectItem>
+                        <SelectItem value="Finishing">Finishing</SelectItem>
+                        <SelectItem value="Selesai">Selesai (Siap Ambil)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 border border-emerald-100 shadow-sm mt-3">
                     <span className="text-sm font-semibold text-emerald-800">{jualIsDp ? "Pemasukan Kas (DP)" : "Total Tagihan"}</span>

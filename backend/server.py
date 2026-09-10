@@ -286,6 +286,27 @@ async def delete_transaction(tid: str):
     txn = await db.transactions.find_one({"id": tid})
     if txn:
         await add_log("Kas", f"Menghapus transaksi: {txn['keterangan']}")
+        
+        # Cascade 1: If this transaction was a Payment of a Piutang/Utang record
+        source_rid = txn.get("source_record_id")
+        if source_rid:
+            rec = await db.records.find_one({"id": source_rid})
+            if rec:
+                rec["status"] = "Belum Lunas"
+                rec["transaction_id"] = None
+                await db.records.replace_one({"id": source_rid}, rec)
+                
+                # if tied to a sale DP
+                sale = await db.sales.find_one({"piutang_record_id": source_rid})
+                if sale:
+                    await db.sales.update_one({"id": sale["id"]}, {"$set": {"is_dp": True, "piutang_lunas": False}})
+
+        # Cascade 2: If this transaction was the main payment/DP of a Sale
+        sale = await db.sales.find_one({"transaction_id": tid})
+        if sale:
+            # We completely delete the sale since its core payment was revoked
+            await delete_sale(sale["id"], skip_txn=True)
+            
     await db.transactions.delete_one({"id": tid})
     return {"ok": True}
 
@@ -552,19 +573,21 @@ async def create_sale(input: SaleCreate):
 
 
 @api_router.delete("/sales/{sid}")
-async def delete_sale(sid: str):
+async def delete_sale_route(sid: str):
+    return await delete_sale(sid)
+
+async def delete_sale(sid: str, skip_txn: bool = False):
     sale = await db.sales.find_one({"id": sid}, {"_id": 0})
     if sale:
-        if sale.get("transaction_id"):
+        if not skip_txn and sale.get("transaction_id"):
             await db.transactions.delete_one({"id": sale["transaction_id"]})
         if sale.get("piutang_record_id"):
             await db.records.delete_one({"id": sale["piutang_record_id"]})
         if sale.get("product_id"):
             await db.products.update_one({"id": sale["product_id"], "stok": {"$exists": True}}, {"$inc": {"stok": sale.get("qty", 0)}})
     await db.sales.delete_one({"id": sid})
-    await add_log("Hapus Nota", f"Menghapus pesanan nota {sale.get('nota_no', sid)}")
+    await add_log("Hapus Nota", f"Menghapus pesanan nota {sale.get('nota_no', sid) if sale else sid}")
     return {"ok": True}
-
 
 @api_router.patch("/sales/{sid}/status")
 async def update_sale_status(sid: str, payload: dict):

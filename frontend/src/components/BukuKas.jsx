@@ -67,9 +67,11 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
         <div className="absolute right-8 bottom-0 h-24 w-24 rounded-full bg-white/5" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-200">Total Saldo Kas</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-200">
+              {hasFilter ? "TOTAL (MASUK - KELUAR)" : "TOTAL SALDO KAS"}
+            </p>
             <p className="font-mono-num text-3xl font-bold mt-1" data-testid="kas-total-saldo">
-              {formatRupiah(cashBalance)}
+              {formatRupiah(hasFilter ? totalMasuk - totalKeluar : cashBalance)}
             </p>
             <div className="flex gap-4 mt-3">
               <div className="flex items-center gap-1.5">
@@ -245,10 +247,10 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
               <tfoot>
                 <tr className="border-t-2 border-indigo-100 bg-indigo-50/50">
                   <td colSpan={5} className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600">
-                    Total ({filtered.length} transaksi)
+                    {hasFilter ? `Selisih (${filtered.length} transaksi)` : `Total Saldo Akhir (${filtered.length} transaksi)`}
                   </td>
                   <td className="px-4 py-3 text-right font-mono-num text-sm font-bold text-indigo-700">
-                    {formatRupiah(cashBalance)}
+                    {formatRupiah(hasFilter ? totalMasuk - totalKeluar : cashBalance)}
                   </td>
                   <td colSpan={2} />
                 </tr>

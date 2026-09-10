@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { formatRupiah, monthLabel } from "../lib/format";
+import { formatRupiah, monthLabel, monthKey } from "../lib/format";
 import { availableMonths, monthDetail } from "../lib/compute";
 import { Button } from "./ui/button";
 import {
@@ -32,7 +32,7 @@ const SliderRow = ({ label, value, onChange, min = 10, max = 100, step = 5, colo
   </div>
 );
 
-export const LabaRugi = ({ transactions, profitShares, onMarkShared, onUnmarkShared }) => {
+export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared, onUnmarkShared }) => {
   const months = useMemo(() => availableMonths(transactions), [transactions]);
   const [bulan, setBulan] = useState(months[0] || "");
   const [distribusiPct, setDistribusiPct] = useState(80);
@@ -51,7 +51,24 @@ export const LabaRugi = ({ transactions, profitShares, onMarkShared, onUnmarkSha
     setPemilikPct(val);
   };
 
-  const d = useMemo(() => monthDetail(transactions, bulan), [transactions, bulan]);
+  // Recompute Labarugi components (Accrual Basis for full sync)
+  const dRaw = useMemo(() => monthDetail(transactions, bulan), [transactions, bulan]);
+
+  const labaProdukTarget = useMemo(() => {
+    return sales.filter((s) => monthKey(s.tanggal) === bulan).reduce((a, s) => a + (s.laba || 0), 0);
+  }, [sales, bulan]);
+
+  const omzetTarget = useMemo(() => {
+    return sales.filter((s) => monthKey(s.tanggal) === bulan).reduce((a, s) => a + (s.total || 0), 0);
+  }, [sales, bulan]);
+
+  const hppTarget = omzetTarget - labaProdukTarget;
+
+  const opeks = (dRaw.pengeluaran || 0) - (dRaw.bahanMitra || 0);
+  const accrualLaba = labaProdukTarget - opeks;
+  const accrualMargin = omzetTarget > 0 ? (accrualLaba / omzetTarget) * 100 : 0;
+  const d = { ...dRaw, laba: accrualLaba, margin: accrualMargin };
+
   const shared = profitShares.find((p) => p.bulan === bulan);
 
   const labaDibagi = d.laba > 0 ? Math.round(d.laba * distribusiPct / 100) : 0;
@@ -135,16 +152,17 @@ export const LabaRugi = ({ transactions, profitShares, onMarkShared, onUnmarkSha
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Kolom Kiri: Ringkasan Laba Rugi */}
+        {/* Kolom Kiri: Ringkasan Laba Rugi (Accrual) */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">Ringkasan</p>
-          <Row label="Total Pemasukan" value={d.pemasukan} className="text-emerald-600" />
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">Pendapatan Penjualan</p>
+          <Row label="Omzet (Pendapatan Kotor)" value={omzetTarget} className="text-emerald-700" />
+          <Row label="Total HPP (Harga Modal)" value={hppTarget} className="text-red-500" />
+          <div className="my-1 border-t border-slate-100" />
+          <Row label="Laba Kotor Penjualan" value={labaProdukTarget} className="text-indigo-600 font-bold" />
+
           <div className="my-2 border-t border-dashed border-slate-200" />
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pengeluaran</p>
-          <Row label="Bahan / Mitra" value={d.bahanMitra} className="text-red-600" />
-          {Object.keys(d.biayaTetapRinci || {}).length > 0 && (
-            <div className="my-1 border-t border-slate-100" />
-          )}
+
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Beban Operasional</p>
           {Object.entries(d.biayaTetapRinci || {})
             .filter(([_, v]) => v > 0)
             .sort((a, b) => b[1] - a[1])
@@ -152,10 +170,12 @@ export const LabaRugi = ({ transactions, profitShares, onMarkShared, onUnmarkSha
               <Row key={nama} label={nama} value={nominal} className="text-red-600" />
             ))}
           {d.lainPengeluaran > 0 && <Row label="Pengeluaran Lain-lain" value={d.lainPengeluaran} className="text-red-600" />}
+
           <div className="my-2 border-t border-dashed border-slate-200" />
-          <Row label="Total Pengeluaran" value={d.pengeluaran} className="text-red-600" />
+          <Row label="Total Beban Operasional" value={opeks} className="text-red-600" />
+
           <div className="my-2 border-t-2 border-slate-200" />
-          <Row label="Laba Bersih" value={d.laba} className={`text-base font-bold ${d.laba >= 0 ? "text-emerald-700" : "text-red-600"}`} />
+          <Row label="Laba Bersih Usaha" value={d.laba} className={`text-base font-bold ${d.laba >= 0 ? "text-emerald-700" : "text-red-600"}`} />
 
           {/* Realisasi jika sudah dibagi */}
           {d.laba > 0 && shared && (

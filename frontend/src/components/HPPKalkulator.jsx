@@ -65,6 +65,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
   const [jualRow, setJualRow] = useState(null);
   const [jualQty, setJualQty] = useState("1");
   const [jualPembeli, setJualPembeli] = useState("");
+  const [jualStatus, setJualStatus] = useState("Selesai");
   const [jualDiskon, setJualDiskon] = useState("0");
   const [jualDone, setJualDone] = useState(null);
   const [jualIsDp, setJualIsDp] = useState(false);
@@ -150,6 +151,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     setJualDiskon("0");
     setJualDiskonMode("rp");
     setJualDone(null);
+    setJualStatus(r.jenis === "Sendiri" ? "Desain" : "Selesai");
     setJualOpen(true);
   };
 
@@ -163,6 +165,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     setJualPembeli("");
     setJualIsDp(false);
     setJualDpAmount("");
+    setJualStatus(latest?.jenis === "Sendiri" ? "Desain" : "Selesai");
   };
 
   const confirmJual = async (cetak) => {
@@ -178,6 +181,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
       product_id: jualRow.id, nama: jualRow.nama, kategori: jualRow.kategori,
       qty, harga_satuan: harga, hpp_satuan: hpp, diskon: diskonRp, pembeli: jualPembeli, tanggal: todayISO(),
       is_dp: jualIsDp, dp_amount: parseNumber(jualDpAmount) || 0,
+      status_produksi: jualStatus,
     });
     setRows((rs) => rs.map((x) => (x.id === jualRow.id ? { ...x, stok: (parseInt(x.stok, 10) || 0) - qty } : x)));
     if (cetak) downloadNota(sale, profile);
@@ -616,9 +620,24 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                   <div className="mt-2 pl-6">
                     <Label className="text-xs text-slate-500 mb-1 block">Nominal DP Dibayarkan</Label>
                     <Input inputMode="numeric" placeholder="Contoh: 500000" value={jualDpAmount} onChange={(e) => setJualDpAmount(formatNumberInput(e.target.value))} className="bg-white font-mono-num" />
-                    <p className="text-[10px] text-amber-600 mt-1 font-medium bg-amber-50 p-1.5 rounded inline-block">Sisa {formatRupiah(Math.max(0, total - parseNumber(jualDpAmount)))} otomatis masuk ke Piutang (Status Produksi masuk Antrean).</p>
+                    <p className="text-[10px] text-amber-600 mt-1 font-medium bg-amber-50 p-1.5 rounded inline-block">Sisa {formatRupiah(Math.max(0, total - parseNumber(jualDpAmount)))} otomatis masuk ke Piutang.</p>
                   </div>
                 )}
+
+                <div className="mt-3">
+                  <Label className="text-xs text-slate-500 mb-1 block">Status Produksi Awal</Label>
+                  <Select value={jualStatus} onValueChange={setJualStatus}>
+                    <SelectTrigger className="bg-white font-semibold flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Desain">Desain</SelectItem>
+                      <SelectItem value="Cetak">Cetak</SelectItem>
+                      <SelectItem value="Finishing">Finishing</SelectItem>
+                      <SelectItem value="Selesai">Selesai (Siap Ambil)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 mt-4 border border-emerald-100">
                   <span className="text-sm font-semibold text-emerald-800">{jualIsDp ? "Pemasukan (DP)" : "Total Tagihan"}</span>
