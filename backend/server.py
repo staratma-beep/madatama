@@ -25,9 +25,18 @@ app = FastAPI()
 
 # Create uploads directory if not exists
 os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=os.path.join(ROOT_DIR, "uploads")), name="uploads")
+
+# Replace StaticFiles mount with an explicit endpoint to ensure CORSMiddleware applies
+from fastapi.responses import FileResponse
 
 api_router = APIRouter(prefix="/api")
+
+@app.get("/uploads/{filename}")
+async def get_upload_file(filename: str):
+    path = os.path.join(ROOT_DIR, "uploads", filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "File not found")
+    return FileResponse(path)
 
 
 def now_iso():
@@ -100,6 +109,7 @@ class Settings(BaseModel):
     alamat: str = ""
     telepon: str = ""
     logo: str = ""
+    favicon: str = ""
     app_theme: str = "indigo"
     sidebar_config: Optional[list] = None
     tab_names: Optional[dict] = None
@@ -145,6 +155,7 @@ class Product(BaseModel):
     is_public: bool = False
     image_url: Optional[str] = ""
     deskripsi: Optional[str] = ""
+    color_images: Optional[dict] = Field(default_factory=dict)
 
 
 class ProductCreate(BaseModel):
@@ -159,6 +170,7 @@ class ProductCreate(BaseModel):
     is_public: bool = False
     image_url: Optional[str] = ""
     deskripsi: Optional[str] = ""
+    color_images: Optional[dict] = Field(default_factory=dict)
 
 
 _SALE_JENIS = {"Branding": "Penjualan Branding", "Printing": "Penjualan Printing", "Advertising": "Penjualan Advertising"}
@@ -688,6 +700,10 @@ async def restore(data: BackupData):
     return {"ok": True}
     
 class WebSettingsSchema(BaseModel):
+    business_name: str = "Madatama Print"
+    logo_url: str = ""
+    favicon_url: str = ""
+    whatsapp_number: str = ""
     title: str = "Kualitas Terbaik, Harga Masuk Akal."
     subtitle: str = "Dari spanduk besar hingga stempel kecil, semua kebutuhan promosi dan bisnis Anda ada di sini."
     banner_url: str = ""
@@ -735,6 +751,7 @@ class PublicOrderItem(BaseModel):
     product_id: str
     qty: int = 1
     catatan: Optional[str] = ""
+    custom_image: Optional[str] = ""
 
 class PublicOrderCreate(BaseModel):
     nama: str
@@ -816,11 +833,21 @@ async def public_track_order(order_id: str):
             if all_done:
                 overall_status = "SELESAI"
                 
+        raw_items = po.get("items", [])
+        for it in raw_items:
+             if "product_id" in it:
+                  prod = await db.products.find_one({"id": it["product_id"]}, {"_id": 0})
+                  if prod:
+                       it["product"] = prod
+
         return {
             "id": po["id"], 
+            "nama": po.get("nama"),
+            "created_at": po.get("created_at"),
             "type": "pesanan", 
             "status": overall_status,
-            "items": items,
+            "items": raw_items, 
+            "sales_items": items,
             "total_tagihan": total_tagihan,
             "payment_method": po.get("payment_method"),
             "bukti_bayar": po.get("bukti_bayar"),
@@ -840,14 +867,21 @@ async def get_admin_public_orders():
     # Return all orders, sorting newest first
     orders = await db.public_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(300)
     for o in orders:
+        total = 0
         for item in o.get("items", []):
             product = await db.products.find_one({"id": item["product_id"]}, {"_id": 0})
             item["product"] = product
+            if product:
+                total += (product.get("harga_jual") or 0) * item.get("qty", 1)
         
         # Legacy fallback for old test requests
         if "product_id" in o and "product" not in o:
             product = await db.products.find_one({"id": o["product_id"]}, {"_id": 0})
             o["product"] = product
+            if product:
+                total += (product.get("harga_jual") or 0) * o.get("qty", 1)
+        
+        o["total"] = total
     return orders
 
 @api_router.post("/public-orders/{order_id}/accept")

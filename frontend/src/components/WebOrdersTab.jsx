@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "../lib/api";
 import { CheckSquare, Trash2, Receipt, Search, Image as ImageIcon, ShoppingCart } from "lucide-react";
 import { parseNumber, formatNumberInput } from "../lib/format";
 import { toast } from "sonner";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 export const WebOrdersTab = ({ onAccepted }) => {
     const [orders, setOrders] = useState([]);
@@ -14,6 +18,8 @@ export const WebOrdersTab = ({ onAccepted }) => {
     const [editingOrder, setEditingOrder] = useState(null);
     const [editForm, setEditForm] = useState({ nama: "", kontak: "" });
     const [selectedIds, setSelectedIds] = useState([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [confirmModal, setConfirmModal] = useState(null);
 
     const handleSaveEdit = async () => {
         try {
@@ -37,30 +43,119 @@ export const WebOrdersTab = ({ onAccepted }) => {
         }
     };
 
+    const prevOrdersRef = useRef([]);
+
+    const playNotificationSound = () => {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            // Modern, pleasant double-chime
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (e) { console.log(e); }
+    };
+
     const refreshOrders = async () => {
         try {
             const o = await api.getPublicOrders();
             setOrders(o);
+
+            // Check for new orders to play sound
+            const currentIds = o.map(x => x.id);
+            const prevIds = prevOrdersRef.current;
+            const hasNewOrder = currentIds.some(id => !prevIds.includes(id));
+
+            if (prevIds.length > 0 && hasNewOrder) {
+                playNotificationSound();
+                toast('🔔 Pesanan Web Baru Masuk!', { style: { background: '#4f46e5', color: '#fff' } });
+            }
+            prevOrdersRef.current = currentIds;
         } catch (e) { }
     };
 
-    const handleBulkDelete = async () => {
-        if (!confirm(`Yakin ingin secara permanen menghapus ${selectedIds.length} pesanan sekaligus? Data yang terhapus tidak dapat dikembalikan.`)) return;
-        try {
-            await Promise.all(selectedIds.map(id => api.deletePublicOrder(id)));
-            toast.success(`${selectedIds.length} pesanan berhasil dihapus`);
-            setSelectedIds([]);
-            refreshOrders();
-        } catch {
-            toast.error("Terjadi kegagalan saat menghapus beberapa pesanan");
-        }
+    const handleBulkDelete = () => {
+        setConfirmModal({
+            title: "Hapus Pesanan",
+            message: `Yakin ingin secara permanen menghapus ${selectedIds.length} pesanan sekaligus? Data yang terhapus tidak dapat dikembalikan.`,
+            type: "danger",
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try {
+                    await Promise.all(selectedIds.map(id => api.deletePublicOrder(id)));
+                    toast.success(`${selectedIds.length} pesanan berhasil dihapus`);
+                    setSelectedIds([]);
+                    refreshOrders();
+                } catch {
+                    toast.error("Terjadi kegagalan saat menghapus beberapa pesanan");
+                }
+            }
+        });
     };
 
     useEffect(() => {
         refreshOrders();
-        const inv = setInterval(refreshOrders, 30000);
+        const inv = setInterval(refreshOrders, 8000); // Poll every 8s
         return () => clearInterval(inv);
     }, []);
+
+    const handleBulkAccept = () => {
+        setConfirmModal({
+            title: "Persetujuan Pesanan",
+            message: `Yakin ingin menyetujui (Acc) ${selectedIds.length} pesanan sekaligus dengan harga awal katalog?`,
+            type: "success",
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try {
+                    const selectedOrders = orders.filter(o => selectedIds.includes(o.id));
+                    toast.loading("Menerima pesanan massal...", { id: "bulk-acc" });
+
+                    for (const o of selectedOrders) {
+                        const items = o.items || [o];
+                        for (const it of items) {
+                            const hargaNum = parseFloat(it.product?.harga_jual || 0);
+                            const hppBahan = parseFloat(it.product?.bahan_baku || 0);
+                            const hppJasa = parseFloat(it.product?.jasa_mitra || 0);
+                            const hppTambahan = parseFloat(it.product?.tambahan || 0);
+                            const hppTotal = hppBahan + hppJasa + hppTambahan;
+
+                            await api.createSale({
+                                nama: it.product?.nama || "Produk Web",
+                                kategori: it.product?.kategori || "Bebas",
+                                qty: it.qty,
+                                harga_satuan: hargaNum,
+                                hpp_satuan: hppTotal,
+                                is_dp: true,
+                                dp_amount: 0,
+                                pembeli: o.nama,
+                                product_id: it.product_id,
+                                status_produksi: "Desain",
+                                public_order_id: o.id
+                            });
+                        }
+                        await api.resolvePublicOrder(o.id);
+                    }
+                    toast.success(`${selectedIds.length} pesanan berhasil disetujui`, { id: "bulk-acc" });
+                    setSelectedIds([]);
+                    refreshOrders();
+                    if (onAccepted) onAccepted();
+                } catch {
+                    toast.error("Terjadi kegagalan saat menyetujui beberapa pesanan", { id: "bulk-acc" });
+                }
+            }
+        });
+    };
 
     const handleStartAccept = (o) => {
         setAccepting(o);
@@ -125,6 +220,11 @@ export const WebOrdersTab = ({ onAccepted }) => {
 
     const displayedOrders = activeTab === "baru" ? pendingOrders : activeTab === "bayar" ? pendingPayments : historyOrders;
 
+    const filteredAndSearchedOrders = displayedOrders.filter(o =>
+        (o.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (o.id || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="flex flex-col max-w-7xl mx-auto space-y-4 pb-12">
             {/* Banner Section */}
@@ -138,10 +238,26 @@ export const WebOrdersTab = ({ onAccepted }) => {
                         </h2>
                         <p className="mt-1 text-sm text-indigo-100 max-w-lg opacity-90">Kelola pesanan baru, setujui pembayaran, dan pantau riwayat pesanan dari web publik.</p>
                     </div>
-                    <div>
-                        <button onClick={refreshOrders} className="bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm flex items-center gap-2 backdrop-blur-sm border-0 text-sm">
-                            Muat Ulang
-                        </button>
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search size={16} className="text-white/60" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Cari Nama / ID Pesanan..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-4 py-2.5 bg-white/10 hover:bg-white/20 focus:bg-white/30 border border-white/20 text-white placeholder:text-white/60 rounded-lg text-sm outline-none transition-all w-64 shadow-sm"
+                            />
+                        </div>
+                        <div className="bg-white/10 text-white font-medium px-4 py-2.5 rounded-lg border border-white/20 text-sm flex items-center gap-2 cursor-default" title="Otomatis memuat data pesanan terbaru setiap 5 detik">
+                            <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            Live Update
+                        </div>
                     </div>
                 </div>
             </div>
@@ -156,22 +272,31 @@ export const WebOrdersTab = ({ onAccepted }) => {
                     </div>
 
                     {selectedIds.length > 0 && (
-                        <div className="flex items-center gap-4 bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl shadow-sm animate-in fade-in slide-in-from-right-5">
-                            <span className="text-sm font-bold text-rose-700">{selectedIds.length} Dipilih</span>
-                            <button onClick={handleBulkDelete} className="bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">
+                        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm animate-in fade-in slide-in-from-right-5">
+                            <span className="text-sm font-bold text-slate-700 mr-2">{selectedIds.length} Dipilih</span>
+                            {activeTab === 'baru' && (
+                                <button onClick={handleBulkAccept} className="bg-emerald-100 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-700 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap">
+                                    <CheckSquare size={14} /> Acc Sekaligus
+                                </button>
+                            )}
+                            <button onClick={handleBulkDelete} className="bg-rose-100 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap">
                                 <Trash2 size={14} /> Hapus Sekaligus
                             </button>
                         </div>
                     )}
                 </div>
 
-                {displayedOrders.length === 0 ? (
+                {filteredAndSearchedOrders.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-500 py-20 bg-slate-50/50 rounded-2xl border border-slate-100/50 mt-2">
                         <div className="bg-white p-6 rounded-full shadow-sm mb-4">
                             <Search className="text-indigo-200" size={48} />
                         </div>
-                        <p className="font-semibold text-slate-600 text-lg mb-1">Tidak ada pesanan</p>
-                        <p className="text-sm text-slate-400">Belum ada data pesanan pada kategori ini saat ini.</p>
+                        <p className="font-semibold text-slate-600 text-lg mb-1">
+                            {searchQuery ? 'Pencarian tidak ditemukan' : 'Tidak ada pesanan'}
+                        </p>
+                        <p className="text-sm text-slate-400">
+                            {searchQuery ? `Tidak ada pesanan yang cocok dengan "${searchQuery}"` : 'Belum ada data pesanan pada kategori ini saat ini.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
@@ -181,28 +306,29 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                     <th className="px-5 py-4 w-12 text-center">
                                         <input
                                             type="checkbox"
-                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                            checked={displayedOrders.length > 0 && selectedIds.length === displayedOrders.length}
-                                            onChange={(e) => e.target.checked ? setSelectedIds(displayedOrders.map(o => o.id)) : setSelectedIds([])}
+                                            className="circular-checkbox"
+                                            checked={filteredAndSearchedOrders.length > 0 && selectedIds.length === filteredAndSearchedOrders.length}
+                                            onChange={(e) => e.target.checked ? setSelectedIds(filteredAndSearchedOrders.map(o => o.id)) : setSelectedIds([])}
                                         />
                                     </th>
                                     <th className="px-2 py-4">Tanggal & ID Pesanan</th>
-                                    <th className="px-6 py-4">Detail Pembeli & Item</th>
+                                    <th className="px-4 py-4 w-48">Pembeli</th>
+                                    <th className="px-4 py-4 min-w-[260px]">Item Pesanan</th>
                                     <th className="px-6 py-4 text-center w-40">Status</th>
                                     <th className="px-6 py-4 text-center w-48">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
-                                {displayedOrders.map(o => {
+                                {filteredAndSearchedOrders.map(o => {
                                     const items = o.items || [o];
                                     const isSelected = selectedIds.includes(o.id);
 
                                     return (
                                         <tr key={o.id} className={`group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 ${isSelected ? 'bg-indigo-50/40 shadow-[inset_4px_0_0_0_rgba(99,102,241,1)]' : 'bg-white'}`}>
-                                            <td className="px-5 py-5 align-top text-center w-12">
+                                            <td className="px-5 py-3.5 align-middle text-center w-12">
                                                 <input
                                                     type="checkbox"
-                                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                    className="circular-checkbox"
                                                     checked={isSelected}
                                                     onChange={(e) => {
                                                         if (e.target.checked) setSelectedIds([...selectedIds, o.id]);
@@ -210,45 +336,49 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                     }}
                                                 />
                                             </td>
-                                            <td className="px-2 py-5 align-top w-56">
-                                                <div className="flex flex-col gap-1.5">
+                                            <td className="px-2 py-3.5 align-middle w-56">
+                                                <div className="flex items-center gap-3">
                                                     <span className="font-bold text-slate-800 whitespace-nowrap">{new Date(o.created_at).toLocaleString("id-ID", { dateStyle: 'medium', timeStyle: 'short' })}</span>
                                                     <span className="inline-block w-fit font-mono font-bold text-[11px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded tracking-wider shadow-sm">{o.id}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 align-top min-w-[320px]">
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest bg-slate-200 px-2 py-0.5 rounded-sm text-slate-700 shadow-sm">Pembeli</span>
-                                                        <span className="font-bold text-slate-900 text-[13px]">{o.nama}</span>
-                                                        <span className="text-xs text-slate-400 font-mono">({o.kontak})</span>
-                                                    </div>
-                                                    <div className="space-y-2 w-full max-w-md">
-                                                        {items.map((it, idx) => (
-                                                            <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-xs whitespace-normal w-full transition-shadow hover:shadow-md">
-                                                                <div className="flex justify-between items-start gap-4 font-bold text-slate-700">
-                                                                    <span className="flex gap-2 items-start"><span className="opacity-70">📦</span> {it.product?.nama || "Produk Khusus"}</span>
-                                                                    <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] flex-none">Qty: {it.qty}</span>
-                                                                </div>
-                                                                {it.catatan && <p className="mt-2 text-[11px] text-slate-600 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg italic">"{it.catatan}"</p>}
-
-                                                                {accepting?.id === o.id && (
-                                                                    <div className="mt-2 flex items-center gap-2 bg-indigo-50/50 p-1.5 rounded border border-indigo-100/50">
-                                                                        <Label className="text-[10px] font-bold text-indigo-700 whitespace-nowrap">Input Harga Rp</Label>
-                                                                        <Input
-                                                                            className="h-6 text-xs px-2 font-mono-num font-bold text-indigo-900 bg-white"
-                                                                            value={hargaJuals[idx] || ""}
-                                                                            onChange={e => setHargaJuals({ ...hargaJuals, [idx]: formatNumberInput(e.target.value) })}
-                                                                            placeholder="0"
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                            <td className="px-4 py-3.5 align-middle w-48">
+                                                <div className="flex flex-col gap-0.5 max-w-[160px]">
+                                                    <span className="font-bold text-slate-800 text-[13px] truncate" title={o.nama}>{o.nama}</span>
+                                                    <span className="text-[11px] text-slate-400 font-mono">({o.kontak})</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 align-top text-center border-l-transparent">
+                                            <td className="px-4 py-3.5 align-middle min-w-[260px]">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {items.map((it, idx) => (
+                                                        <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 py-1 px-2.5 rounded-lg shadow-sm">
+                                                            {it.custom_image ? (
+                                                                <a href={it.custom_image} target="_blank" rel="noreferrer" className="w-6 h-6 border border-slate-200 rounded object-cover overflow-hidden hover:scale-110 transition-transform" title="Desain Kustom">
+                                                                    <img src={it.custom_image} className="w-full h-full object-cover" alt="Kustom" />
+                                                                </a>
+                                                            ) : <span className="text-[10px] grayscale opacity-60">📦</span>}
+                                                            <span className="text-xs font-bold text-slate-700 max-w-[140px] truncate">{it.product?.nama || "Produk"}</span>
+                                                            {it.catatan && (
+                                                                <span className="text-[10px] text-slate-500 italic max-w-[80px] truncate" title={it.catatan}>"{it.catatan}"</span>
+                                                            )}
+                                                            <span className="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-[9px] shrink-0">x{it.qty}</span>
+
+                                                            {accepting?.id === o.id && (
+                                                                <div className="flex items-center gap-1.5 ml-2 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
+                                                                    <Label className="text-[9px] font-bold text-indigo-700">Rp</Label>
+                                                                    <Input
+                                                                        className="h-5 w-20 text-[10px] px-1 font-mono-num font-bold text-indigo-900 bg-white"
+                                                                        value={hargaJuals[idx] || ""}
+                                                                        onChange={e => setHargaJuals({ ...hargaJuals, [idx]: formatNumberInput(e.target.value) })}
+                                                                        placeholder="Harga Jual"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-3.5 align-middle text-center border-l-transparent">
                                                 {activeTab === 'bayar' ? (
                                                     <div className="flex flex-col items-center gap-2">
                                                         <span className="text-[10px] font-bold text-amber-700 bg-amber-50 shadow-sm px-3 py-1 rounded-full border border-amber-200 uppercase tracking-wider">Menunggu Bayar</span>
@@ -266,27 +396,27 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                     <span className="inline-block px-3 py-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-sm">Baru</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-5 align-top">
+                                            <td className="px-6 py-3.5 align-middle">
                                                 {accepting?.id === o.id ? (
                                                     <div className="flex flex-col gap-2 items-center justify-center">
                                                         <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm transition-all hover:shadow-md" onClick={handleConfirmAccept}>Simpan</button>
                                                         <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 rounded-xl text-xs transition-colors" onClick={() => setAccepting(null)}>Batal</button>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex flex-wrap items-center justify-center gap-2">
+                                                    <div className="flex items-center justify-center gap-2 flex-nowrap">
                                                         {activeTab === 'baru' && (
-                                                            <button onClick={() => handleStartAccept(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5"><CheckSquare size={14} /> Acc</button>
+                                                            <button onClick={() => handleStartAccept(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><CheckSquare size={14} /> Acc</button>
                                                         )}
                                                         {activeTab === 'bayar' && (
-                                                            <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5"><Receipt size={14} /> Lunas</button>
+                                                            <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Lunas</button>
                                                         )}
 
                                                         <button title="Edit Pesanan" onClick={() => {
                                                             setEditingOrder(o);
                                                             setEditForm({ nama: o.nama, kontak: o.kontak });
-                                                        }} className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold justify-center rounded-lg text-xs transition-all shadow-sm">Edit</button>
+                                                        }} className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold justify-center rounded-lg text-xs transition-all shadow-sm whitespace-nowrap">Edit</button>
 
-                                                        <button title="Hapus Pesanan" onClick={() => handleDeleteOrder(o)} className="grid h-9 w-9 place-items-center rounded-lg bg-white border border-slate-200 hover:bg-rose-500 hover:border-rose-500 text-slate-400 hover:text-white transition-all shadow-sm">
+                                                        <button title="Hapus Pesanan" onClick={() => handleDeleteOrder(o)} className="grid shrink-0 h-9 w-9 place-items-center rounded-lg bg-white border border-slate-200 hover:bg-rose-500 hover:border-rose-500 text-slate-400 hover:text-white transition-all shadow-sm">
                                                             <Trash2 size={16} />
                                                         </button>
                                                     </div>
@@ -323,7 +453,29 @@ export const WebOrdersTab = ({ onAccepted }) => {
                         </div>
                     </div>
                 )}
+
+                {confirmModal && (
+                    <AlertDialog open={!!confirmModal} onOpenChange={(o) => !o && setConfirmModal(null)}>
+                        <AlertDialogContent className="rounded-2xl">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="font-heading text-lg">{confirmModal.title}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {confirmModal.message}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className={`rounded-xl ${confirmModal.type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                                    onClick={confirmModal.onConfirm}
+                                >
+                                    {confirmModal.type === 'danger' ? 'Hapus' : 'Ya, Setuju'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
-        </div>
+        </div >
     );
 };

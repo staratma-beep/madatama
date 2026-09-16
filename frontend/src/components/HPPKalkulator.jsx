@@ -42,7 +42,8 @@ const toPayload = (r) => ({
   stok: parseInt(r.stok, 10) || 0,
   is_public: r.is_public || false,
   image_url: r.image_url || "",
-  deskripsi: r.deskripsi || ""
+  deskripsi: r.deskripsi || "",
+  color_images: r.color_images || {}
 });
 
 const NumCell = ({ value, onChange, onBlur, testId }) => (
@@ -223,6 +224,22 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
       toast.success("Gambar berhasil diunggah", { id: "upload" });
     } catch (err) {
       toast.error("Gagal mengunggah gambar", { id: "upload" });
+    }
+  };
+
+  const handleColorFileUpload = async (e, hexCode) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.loading(`Mengunggah gambar varian...`, { id: "upload-color" });
+      const url = await api.uploadImage(file);
+      setWebRow(prev => ({
+        ...prev,
+        color_images: { ...(prev.color_images || {}), [hexCode]: url }
+      }));
+      toast.success(`Gambar varian berhasil diunggah`, { id: "upload-color" });
+    } catch (err) {
+      toast.error(`Gagal mengunggah gambar varian`, { id: "upload-color" });
     }
   };
 
@@ -762,7 +779,7 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
             </DialogDescription>
           </DialogHeader>
           {webRow && (
-            <div className="space-y-4 py-3">
+            <div className="space-y-4 py-3 max-h-[65vh] overflow-y-auto px-1 -mx-1 custom-scrollbar">
               <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-xl border border-indigo-100">
                 <div>
                   <Label className="text-sm font-bold text-indigo-900 block">Jual Online</Label>
@@ -807,6 +824,42 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                     value={webRow.deskripsi || ""}
                     onChange={(e) => setWebRow({ ...webRow, deskripsi: e.target.value })}
                   />
+                </div>
+
+                <div className="pt-2">
+                  <Label className="flex items-center justify-between mb-2">
+                    <span>Varian Gambar Warna (Khusus Editor Baju)</span>
+                  </Label>
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">Opsional: Jika Anda punya foto baju berwarna (selain foto utama), upload di sini agar otomatis berubah saat klien memilih warnanya.</p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {['#ffffff', '#000000', '#dc2626', '#1d4ed8', '#16a34a', '#f59e0b', '#8b5cf6'].map(hex => (
+                        <div key={hex} className="border border-slate-200 rounded-lg overflow-hidden relative group bg-slate-50 flex flex-col">
+                          <div className="h-1 bg-slate-200" style={{ backgroundColor: hex }}></div>
+                          <div className="flex-1 p-2 flex flex-col items-center justify-center gap-2 aspect-square relative hover:bg-slate-100 transition-colors">
+                            {webRow.color_images?.[hex] ? (
+                              <>
+                                <img src={webRow.color_images[hex]} className="absolute inset-0 w-full h-full object-cover z-0" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center">
+                                  <label className="cursor-pointer bg-white text-xs px-2 py-1 rounded shadow text-slate-800 font-bold hover:bg-slate-100">
+                                    Ganti
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleColorFileUpload(e, hex)} />
+                                  </label>
+                                </div>
+                              </>
+                            ) : (
+                              <label className="cursor-pointer flex flex-col items-center gap-1 w-full h-full justify-center text-slate-400 hover:text-indigo-600">
+                                <Image size={16} />
+                                <span className="text-[9px] font-bold">Upload</span>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleColorFileUpload(e, hex)} />
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

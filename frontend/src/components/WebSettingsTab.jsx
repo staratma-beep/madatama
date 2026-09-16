@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Monitor, Image as ImageIcon, Globe } from "lucide-react";
 
 export const WebSettingsTab = () => {
-    const [data, setData] = useState({ title: "", subtitle: "", banner_url: "", theme_gradient: "indigo-purple", banner_position: "center", banner_opacity: 40 });
+    const [data, setData] = useState({ title: "", subtitle: "", banner_url: "", theme_gradient: "indigo-purple", banner_position: "center", banner_opacity: 40, business_name: "Madatama Print", logo_url: "", favicon_url: "" });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -39,6 +39,32 @@ export const WebSettingsTab = () => {
         }
     };
 
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            toast.loading("Mengunggah logo...", { id: "upload-logo" });
+            const url = await api.uploadImage(file);
+            setData({ ...data, logo_url: url });
+            toast.success("Logo berhasil diunggah", { id: "upload-logo" });
+        } catch (err) {
+            toast.error("Gagal mengunggah logo", { id: "upload-logo" });
+        }
+    };
+
+    const handleFaviconUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            toast.loading("Mengunggah icon...", { id: "upload-favicon" });
+            const url = await api.uploadImage(file);
+            setData({ ...data, favicon_url: url });
+            toast.success("Icon berhasil diunggah", { id: "upload-favicon" });
+        } catch (err) {
+            toast.error("Gagal mengunggah icon", { id: "upload-favicon" });
+        }
+    };
+
     if (loading) return <div className="p-10 text-center animate-pulse text-indigo-500">Memuat Pengaturan...</div>;
 
     return (
@@ -60,10 +86,74 @@ export const WebSettingsTab = () => {
 
                 <div className="space-y-5">
                     <div>
+                        <Label className="text-slate-700 font-bold mb-1.5 block">Nama Bisnis (Ditampilkan di Header)</Label>
+                        <Input
+                            value={data.business_name} onChange={e => setData({ ...data, business_name: e.target.value })}
+                            placeholder="Contoh: Madatama Print"
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-slate-700 font-bold mb-1.5 block">Logo Bisnis</Label>
+                        <div className="flex gap-4 mt-2">
+                            <div className="bg-slate-100 w-16 h-16 rounded-xl flex-none grid place-items-center overflow-hidden border border-slate-200">
+                                {data.logo_url ? (
+                                    <img src={data.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                                ) : (
+                                    <ImageIcon size={24} className="text-slate-400" />
+                                )}
+                            </div>
+                            <div className="flex-1 space-y-2 flex flex-col justify-center">
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleLogoUpload}
+                                    className="cursor-pointer file:cursor-pointer file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-indigo-100"
+                                />
+                                {data.logo_url && (
+                                    <button onClick={() => setData({ ...data, logo_url: "" })} className="text-xs font-bold text-red-500 hover:underline w-fit">Hapus Logo</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <Label className="text-slate-700 font-bold mb-1.5 block">Icon Web (Favicon)</Label>
+                        <div className="flex gap-4 mt-2">
+                            <div className="bg-slate-100 w-16 h-16 rounded-xl flex-none grid place-items-center overflow-hidden border border-slate-200">
+                                {data.favicon_url ? (
+                                    <img src={data.favicon_url} alt="Favicon" className="w-full h-full object-contain p-1" />
+                                ) : (
+                                    <Globe size={24} className="text-slate-400" />
+                                )}
+                            </div>
+                            <div className="flex-1 space-y-2 flex flex-col justify-center">
+                                <Input
+                                    type="file"
+                                    accept="image/x-icon,image/png,image/jpeg"
+                                    onChange={handleFaviconUpload}
+                                    className="cursor-pointer file:cursor-pointer file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-indigo-100"
+                                />
+                                <p className="text-[11px] text-slate-500 leading-tight">Icon kecil yang muncul di tab browser. Disarankan ukuran kotak 32x32px.</p>
+                                {data.favicon_url && (
+                                    <button onClick={() => setData({ ...data, favicon_url: "" })} className="text-xs font-bold text-red-500 hover:underline w-fit">Hapus Icon</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 my-4" />
+                    <div>
                         <Label className="text-slate-700 font-bold mb-1.5 block">Judul Halaman Utama (Slogan)</Label>
                         <Input
                             value={data.title} onChange={e => setData({ ...data, title: e.target.value })}
                             placeholder="Contoh: Kualitas Terbaik, Harga Masuk Akal."
+                        />
+                    </div>
+                    <div>
+                        <Label className="text-slate-700 font-bold mb-1.5 block">Nomor Telepon / WhatsApp (CS)</Label>
+                        <Input
+                            value={data.whatsapp_number || ""} onChange={e => setData({ ...data, whatsapp_number: e.target.value })}
+                            placeholder="Contoh: 6281234567890 (Gunakan awalan 62)"
+                            className="font-mono bg-slate-50 focus:bg-white"
                         />
                     </div>
                     <div>

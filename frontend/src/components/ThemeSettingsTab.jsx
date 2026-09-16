@@ -49,8 +49,9 @@ export const ThemeSettingsTab = () => {
     const [groups, setGroups] = useState(DEFAULT_GROUPS);
     const [tabNames, setTabNames] = useState({});
     const [loading, setLoading] = useState(true);
-    const [cfg, setCfg] = useState({ saldo_awal: "0", nama_usaha: "", alamat: "", telepon: "", logo: "" });
+    const [cfg, setCfg] = useState({ saldo_awal: "0", nama_usaha: "", alamat: "", telepon: "", logo: "", favicon: "" });
     const logoRef = useRef();
+    const faviconRef = useRef();
 
     useEffect(() => {
         loadSettings();
@@ -69,6 +70,7 @@ export const ThemeSettingsTab = () => {
                 alamat: s.alamat || "",
                 telepon: s.telepon || "",
                 logo: s.logo || "",
+                favicon: s.favicon || "",
             });
         } catch (e) {
             toast.error("Gagal memuat pengaturan web.");
@@ -86,6 +88,15 @@ export const ThemeSettingsTab = () => {
         e.target.value = "";
     };
 
+    const onFavicon = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        if (file.size > 200 * 1024) { toast.error("Icon maksimal 200KB"); e.target.value = ""; return; }
+        const reader = new FileReader();
+        reader.onload = () => setCfg((c) => ({ ...c, favicon: reader.result }));
+        reader.readAsDataURL(file);
+        e.target.value = "";
+    };
+
     const handleSave = async () => {
         try {
             await api.updateSettings({
@@ -97,7 +108,8 @@ export const ThemeSettingsTab = () => {
                 nama_usaha: cfg.nama_usaha,
                 alamat: cfg.alamat,
                 telepon: cfg.telepon,
-                logo: cfg.logo
+                logo: cfg.logo,
+                favicon: cfg.favicon
             });
             toast.success("Pengaturan berhasil disimpan! Harap muat ulang (refresh) halaman untuk melihat perubahan.");
             setTimeout(() => window.location.reload(), 2000);
@@ -205,6 +217,7 @@ export const ThemeSettingsTab = () => {
                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Building2 size={18} className="text-slate-400" /> Profil Usaha & Pengaturan Kas</h3>
 
                     <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
+                    <input ref={faviconRef} type="file" accept="image/x-icon,image/png,image/jpeg" className="hidden" onChange={onFavicon} />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Kolom 1 (Profil) */}
@@ -220,6 +233,20 @@ export const ThemeSettingsTab = () => {
                                             <Upload size={14} className="mr-2" /> Unggah Logo
                                         </Button>
                                         {cfg.logo && <button type="button" className="text-xs font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, logo: "" })}>Hapus Logo</button>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mb-2">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">Icon Web (Favicon)</Label>
+                                <div className="flex items-center gap-4">
+                                    <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-xl border bg-slate-50 shadow-inner">
+                                        {cfg.favicon ? <img src={cfg.favicon} alt="favicon" className="h-full w-full object-contain" /> : <ImageIcon size={20} className="text-slate-300" />}
+                                    </div>
+                                    <div className="flex flex-col items-start gap-1">
+                                        <Button type="button" variant="outline" size="sm" onClick={() => faviconRef.current?.click()} className="h-7 text-xs border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                            <Upload size={12} className="mr-2" /> Unggah Icon
+                                        </Button>
+                                        {cfg.favicon && <button type="button" className="text-[10px] font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, favicon: "" })}>Hapus Icon</button>}
                                     </div>
                                 </div>
                             </div>
