@@ -119,6 +119,7 @@ class Settings(BaseModel):
     app_theme: str = "indigo"
     sidebar_config: Optional[list] = None
     tab_names: Optional[dict] = None
+    role_permissions: Optional[dict] = None
 
 
 DEFAULT_FIXED_COSTS = [
@@ -205,6 +206,7 @@ class Sale(BaseModel):
     public_order_id: Optional[str] = None
     custom_image: Optional[str] = None
     tenggat_waktu: Optional[str] = None
+    is_prioritas: bool = False
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -673,6 +675,17 @@ async def update_sale_deadline(sid: str, payload: dict):
     await add_log("Produksi", f"Tenggat waktu pesanan {sale['nota_no']} diupdate menjadi {deadline or 'Kosong'}")
 
     return {"ok": True, "tenggat_waktu": deadline}
+
+@api_router.patch("/sales/{sid}/prioritas")
+async def toggle_sale_prioritas(sid: str, payload: dict):
+    is_prioritas = bool(payload.get("is_prioritas", False))
+    sale = await db.sales.find_one({"id": sid}, {"_id": 0})
+    if not sale:
+        raise HTTPException(404, "Sale not found")
+    await db.sales.update_one({"id": sid}, {"$set": {"is_prioritas": is_prioritas}})
+    label = "ditandai PRIORITAS" if is_prioritas else "prioritas dihapus"
+    await add_log("Produksi", f"Pesanan {sale['nota_no']} {label}")
+    return {"ok": True, "is_prioritas": is_prioritas}
 
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)

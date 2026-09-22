@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { api } from "../lib/api";
 import { formatNumberInput, parseNumber } from "../lib/format";
 import { toast } from "sonner";
-import { Save, Plus, ArrowUp, ArrowDown, Trash2, Palette, Settings, Image as ImageIcon, Upload, Building2, Database } from "lucide-react";
+import { Save, Plus, ArrowUp, ArrowDown, Trash2, Palette, Settings, Image as ImageIcon, Upload, Building2, Database, CheckCircle2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
@@ -49,6 +49,12 @@ export const ThemeSettingsTab = () => {
     const [groups, setGroups] = useState(DEFAULT_GROUPS);
     const [tabNames, setTabNames] = useState({});
     const [loading, setLoading] = useState(true);
+    const defaultRoles = {
+        Kasir: ["dashboard", "pesanan-web", "hpp", "kas", "produksi", "riwayat-nota", "piutang", "web", "theme-settings"],
+        Produksi: ["produksi"]
+    };
+    const [rolePermissions, setRolePermissions] = useState(defaultRoles);
+
     const [cfg, setCfg] = useState({ saldo_awal: "0", nama_usaha: "", alamat: "", telepon: "", logo: "", favicon: "" });
     const logoRef = useRef();
     const faviconRef = useRef();
@@ -64,6 +70,8 @@ export const ThemeSettingsTab = () => {
             setTheme(s.app_theme || "indigo");
             setGroups(s.sidebar_config && s.sidebar_config.length > 0 ? s.sidebar_config : DEFAULT_GROUPS);
             setTabNames(s.tab_names || {});
+            setRolePermissions(s.role_permissions || defaultRoles);
+
             setCfg({
                 saldo_awal: formatNumberInput(String(s.saldo_awal || 0)),
                 nama_usaha: s.nama_usaha || "",
@@ -104,6 +112,7 @@ export const ThemeSettingsTab = () => {
                 sidebar_config: groups,
                 app_theme: theme,
                 tab_names: tabNames,
+                role_permissions: rolePermissions,
                 saldo_awal: parseNumber(cfg.saldo_awal),
                 nama_usaha: cfg.nama_usaha,
                 alamat: cfg.alamat,
@@ -177,190 +186,255 @@ export const ThemeSettingsTab = () => {
     if (loading) return <div>Memuat...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-6">
-
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
-                            <Settings className="text-indigo-600" /> Tampilan & Navigasi
-                        </h2>
-                        <p className="text-slate-500 text-sm mt-1">Atur warna tema aplikasi internal dan susunan menu sidebar sesuai kebutuhan bisnis Anda.</p>
-                    </div>
-                    <button onClick={handleSave} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md">
-                        <Save size={18} /> Simpan Perubahan
-                    </button>
-                </div>
-
-                {/* Theme Selection */}
+        <div className="w-full flex flex-col gap-6 pb-10">
+            {/* Header Card */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-20">
                 <div>
-                    <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><Palette size={18} className="text-slate-400" /> Warna Tema Aplikasi</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                        {THEMES.map(t => (
-                            <button
-                                key={t.id}
-                                onClick={() => setTheme(t.id)}
-                                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${theme === t.id ? `border-${t.id}-500 bg-${t.id}-50 ring-2 ring-${t.id}-200` : 'border-slate-100 hover:border-slate-300 bg-white'}`}
-                            >
-                                <div className={`w-8 h-8 rounded-full ${t.color} mb-2 shadow-sm ${theme === t.id ? 'ring-2 ring-white scale-110' : ''}`} />
-                                <span className={`text-[10px] font-bold text-center ${theme === t.id ? `text-${t.id}-700` : 'text-slate-500'}`}>{t.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2">*Perubahan warna tema sebagian besarnya akan terlihat setelah halaman dimuat ulang.</p>
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
+                        <Settings className="text-indigo-600" /> Pengaturan Web Admin
+                    </h2>
+                    <p className="text-slate-500 text-sm mt-1">Atur profil usaha, tampilan, dan navigasi sidebar untuk menyempurnakan pengalaman Anda.</p>
                 </div>
+                <button onClick={handleSave} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md shrink-0">
+                    <Save size={18} /> Simpan Perubahan
+                </button>
+            </div>
 
-                <div className="h-px bg-slate-100 w-full" />
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
 
-                {/* Profil Usaha Configuration */}
-                <div>
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Building2 size={18} className="text-slate-400" /> Profil Usaha & Pengaturan Kas</h3>
+                {/* Kolom Kiri: Profil & Tema */}
+                <div className="xl:col-span-7 flex flex-col gap-6">
 
-                    <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
-                    <input ref={faviconRef} type="file" accept="image/x-icon,image/png,image/jpeg" className="hidden" onChange={onFavicon} />
+                    {/* Profil Usaha & Kas */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+                            <Building2 size={18} className="text-slate-400" /> Profil Usaha & Pengaturan Kas
+                        </h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Kolom 1 (Profil) */}
-                        <div className="space-y-4">
-                            <div className="mb-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">Logo Usaha (Untuk Nota)</Label>
-                                <div className="flex items-center gap-4">
-                                    <div className="grid h-20 w-20 flex-none place-items-center overflow-hidden rounded-xl border bg-slate-50 shadow-inner">
-                                        {cfg.logo ? <img src={cfg.logo} alt="logo" className="h-full w-full object-contain" /> : <ImageIcon size={26} className="text-slate-300" />}
-                                    </div>
-                                    <div className="flex flex-col items-start gap-2">
-                                        <Button type="button" variant="outline" size="sm" onClick={() => logoRef.current?.click()} className="h-8 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                                            <Upload size={14} className="mr-2" /> Unggah Logo
-                                        </Button>
-                                        {cfg.logo && <button type="button" className="text-xs font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, logo: "" })}>Hapus Logo</button>}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="mb-2">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">Icon Web (Favicon)</Label>
-                                <div className="flex items-center gap-4">
-                                    <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-xl border bg-slate-50 shadow-inner">
-                                        {cfg.favicon ? <img src={cfg.favicon} alt="favicon" className="h-full w-full object-contain" /> : <ImageIcon size={20} className="text-slate-300" />}
-                                    </div>
-                                    <div className="flex flex-col items-start gap-1">
-                                        <Button type="button" variant="outline" size="sm" onClick={() => faviconRef.current?.click()} className="h-7 text-xs border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                                            <Upload size={12} className="mr-2" /> Unggah Icon
-                                        </Button>
-                                        {cfg.favicon && <button type="button" className="text-[10px] font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, favicon: "" })}>Hapus Icon</button>}
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <Label>Nama Usaha</Label>
-                                <Input value={cfg.nama_usaha} onChange={(e) => setCfg({ ...cfg, nama_usaha: e.target.value })} placeholder="Ketik nama bisnis Anda di sini" />
-                            </div>
-                        </div>
+                        <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
+                        <input ref={faviconRef} type="file" accept="image/x-icon,image/png,image/jpeg" className="hidden" onChange={onFavicon} />
 
-                        {/* Kolom 2 */}
-                        <div className="space-y-4">
-                            <div>
-                                <Label>Alamat Outlet / Toko</Label>
-                                <Input value={cfg.alamat} onChange={(e) => setCfg({ ...cfg, alamat: e.target.value })} placeholder="Cth: Jl. Raya Mataram No. 10" />
-                            </div>
-                            <div>
-                                <Label>Nomor Telepon / WhatsApp</Label>
-                                <Input value={cfg.telepon} onChange={(e) => setCfg({ ...cfg, telepon: e.target.value })} placeholder="Cth: 0812-3456-7890" />
-                            </div>
-                            <div className="pt-2">
-                                <Label className="text-emerald-700 flex items-center gap-1.5"><Database size={14} /> Saldo Kas Awal / Modal Awal (Rp)</Label>
-                                <p className="text-[10px] text-slate-500 mb-1">Saldo dasar di sistem sebelum bertransaksi.</p>
-                                <Input inputMode="numeric" className="font-mono-num font-bold text-lg h-10 border-emerald-200 focus-visible:ring-emerald-500" value={cfg.saldo_awal} onChange={(e) => setCfg({ ...cfg, saldo_awal: formatNumberInput(e.target.value) })} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="h-px bg-slate-100 w-full" />
-
-                {/* Sidebar Configuration */}
-                <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-slate-800">Susunan Menu Sidebar Terkustomisasi</h3>
-                        <button onClick={addGroup} className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">
-                            <Plus size={14} /> Tambah Grup
-                        </button>
-                    </div>
-
-                    <div className="space-y-4">
-                        {groups.map((g, gIdx) => {
-                            const unselectedTabs = AVAILABLE_TABS.filter(t => !g.keys.includes(t.key));
-
-                            return (
-                                <div key={gIdx} className="border border-slate-200 rounded-xl bg-slate-50/50 p-4 relative group">
-                                    {/* Header Group */}
-                                    <div className="flex justify-between items-start sm:items-center mb-4 gap-4 flex-col sm:flex-row border-b border-slate-200 pb-3">
-                                        <input
-                                            type="text"
-                                            value={g.title}
-                                            onChange={(e) => updateGroupTitle(gIdx, e.target.value)}
-                                            className="font-bold text-slate-700 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-64"
-                                            placeholder="Nama Grup (Misal: Navigasi Utama)"
-                                        />
-
-                                        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
-                                            <button onClick={() => moveGroup(gIdx, -1)} disabled={gIdx === 0} title="Geser ke Atas" className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-30 disabled:hover:bg-transparent"><ArrowUp size={16} /></button>
-                                            <button onClick={() => moveGroup(gIdx, 1)} disabled={gIdx === groups.length - 1} title="Geser ke Bawah" className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-30 disabled:hover:bg-transparent"><ArrowDown size={16} /></button>
-                                            <div className="w-px h-5 bg-slate-200 mx-1"></div>
-                                            <button onClick={() => removeGroup(gIdx)} title="Hapus Grup" className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Sub-kolom 1 */}
+                            <div className="space-y-6">
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Logo Usaha (Untuk Nota)</Label>
+                                    <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
+                                            {cfg.logo ? <img src={cfg.logo} alt="logo" className="h-full w-full object-contain" /> : <ImageIcon size={26} className="text-slate-300" />}
+                                        </div>
+                                        <div className="flex flex-col items-start gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => logoRef.current?.click()} className="h-8 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                <Upload size={14} className="mr-2" /> Unggah Logo
+                                            </Button>
+                                            {cfg.logo && <button type="button" className="text-xs font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, logo: "" })}>Hapus Logo</button>}
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* List Aktif */}
-                                    <div className="space-y-2 mb-4">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Halama Yang Ditampilkan (Sesuai Urutan):</div>
-                                        {g.keys.length === 0 ? (
-                                            <div className="text-xs text-slate-400 italic p-2 border border-dashed rounded-lg text-center bg-white/50">Grup ini masih kosong. Tambahkan halaman di bawah.</div>
-                                        ) : (
-                                            g.keys.map((tabKey, tabIdx) => (
-                                                <div key={tabKey} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative pr-24 group/item">
-                                                    <div className="text-xs text-slate-400 font-mono w-4 font-bold">{tabIdx + 1}.</div>
-                                                    <input
-                                                        type="text"
-                                                        value={tabNames[tabKey] !== undefined ? tabNames[tabKey] : getDefaultLabel(tabKey)}
-                                                        onChange={(e) => updateTabName(tabKey, e.target.value)}
-                                                        className="flex-1 text-sm font-semibold text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 focus:bg-white border focus:border-indigo-300 border-transparent rounded px-2 py-1 outline-none transition-colors"
-                                                        placeholder={getDefaultLabel(tabKey)}
-                                                    />
-
-                                                    {/* Controls (Absolute right side on hover, relative on mobile) */}
-                                                    <div className="absolute right-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 transition-opacity">
-                                                        <button disabled={tabIdx === 0} onClick={() => moveTabInGroup(gIdx, tabIdx, -1)} className="p-1 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded disabled:opacity-30"><ArrowUp size={14} /></button>
-                                                        <button disabled={tabIdx === g.keys.length - 1} onClick={() => moveTabInGroup(gIdx, tabIdx, 1)} className="p-1 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded disabled:opacity-30"><ArrowDown size={14} /></button>
-                                                        <button onClick={() => removeTabFromGroup(gIdx, tabKey)} className="p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded ml-1"><Trash2 size={14} /></button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Icon Web (Favicon)</Label>
+                                    <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
+                                            {cfg.favicon ? <img src={cfg.favicon} alt="favicon" className="h-full w-full object-contain" /> : <ImageIcon size={20} className="text-slate-300" />}
+                                        </div>
+                                        <div className="flex flex-col items-start gap-1">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => faviconRef.current?.click()} className="h-7 text-xs border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                <Upload size={12} className="mr-2" /> Unggah Icon
+                                            </Button>
+                                            {cfg.favicon && <button type="button" className="text-[10px] font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2" onClick={() => setCfg({ ...cfg, favicon: "" })}>Hapus Icon</button>}
+                                        </div>
                                     </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="font-semibold text-slate-700">Nama Usaha</Label>
+                                    <Input value={cfg.nama_usaha} onChange={(e) => setCfg({ ...cfg, nama_usaha: e.target.value })} placeholder="Ketik nama bisnis Anda di sini" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
+                                </div>
+                            </div>
 
-                                    {/* List Tersedia */}
-                                    {unselectedTabs.length > 0 && (
-                                        <div className="mt-4 pt-3 border-t border-slate-200/60">
-                                            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Tambah Halaman:</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {unselectedTabs.map(tab => (
-                                                    <button
-                                                        key={tab.key}
-                                                        onClick={() => addTabToGroup(gIdx, tab.key)}
-                                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-[11px] font-semibold text-slate-500 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all"
-                                                    >
-                                                        <Plus size={12} /> {tabNames[tab.key] !== undefined ? tabNames[tab.key] : tab.label}
-                                                    </button>
-                                                ))}
+                            {/* Sub-kolom 2 */}
+                            <div className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <Label className="font-semibold text-slate-700">Alamat Outlet / Toko</Label>
+                                    <Input value={cfg.alamat} onChange={(e) => setCfg({ ...cfg, alamat: e.target.value })} placeholder="Cth: Jl. Raya Mataram No. 10" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="font-semibold text-slate-700">Nomor Telepon / WhatsApp</Label>
+                                    <Input value={cfg.telepon} onChange={(e) => setCfg({ ...cfg, telepon: e.target.value })} placeholder="Cth: 0812-3456-7890" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
+                                </div>
+                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mt-2">
+                                    <Label className="text-emerald-800 font-bold flex items-center gap-1.5 mb-1"><Database size={16} /> Saldo Kas Awal / Modal Dasar</Label>
+                                    <p className="text-xs text-emerald-600 mb-3 opacity-90">Tentukan nilai saldo untuk pembukuan pertama kali.</p>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-700 font-bold">Rp</div>
+                                        <Input inputMode="numeric" className="pl-9 font-mono-num font-black text-lg h-11 border-emerald-300 bg-white focus-visible:ring-emerald-500" value={cfg.saldo_awal} onChange={(e) => setCfg({ ...cfg, saldo_awal: formatNumberInput(e.target.value) })} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tema Visual */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
+                            <Palette size={18} className="text-slate-400" /> Warna Tema Aplikasi
+                        </h3>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                            {THEMES.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setTheme(t.id)}
+                                    className={`flex flex-col items-center justify-center p-3 px-1 rounded-xl border-2 transition-all ${theme === t.id ? `border-${t.id}-500 bg-${t.id}-50 ring-4 ring-${t.id}-100 shadow-sm transform scale-[1.02]` : 'border-slate-100 hover:border-slate-300 bg-white hover:bg-slate-50'}`}
+                                >
+                                    <div className={`w-10 h-10 rounded-full ${t.color} mb-3 shadow-md ${theme === t.id ? 'ring-2 ring-offset-2 ring-white scale-110' : ''}`} />
+                                    <span className={`text-[10px] font-bold text-center leading-tight ${theme === t.id ? `text-${t.id}-700` : 'text-slate-500'}`}>{t.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-4 bg-slate-50 p-3 rounded-lg border border-slate-100">*Catatan: Perubahan warna tema akan sepenuhnya dimuat setelah halaman direfresh/disimpan.</p>
+                    </div>
+
+                    {/* Hak Akses User */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
+                            <Building2 size={18} className="text-slate-400" /> Pengaturan Hak Akses (Role Permissions)
+                        </h3>
+                        <p className="text-xs text-slate-500 mb-6">Centang menu apa saja yang boleh dibuka oleh akun dengan role terkait. Akun <b>Owner</b> selalu mendapatkan akses ke semua fitur.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {["Kasir", "Produksi"].map((role) => (
+                                <div key={role} className="space-y-3">
+                                    <h4 className="font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded pr-4 inline-flex shadow-sm text-sm tracking-wide">
+                                        Akun {role}
+                                    </h4>
+                                    <div className="grid grid-cols-1 gap-2 border border-slate-200 p-4 rounded-xl bg-slate-50/50">
+                                        {AVAILABLE_TABS.map((tab) => {
+                                            const isChecked = (rolePermissions[role] || []).includes(tab.key);
+                                            return (
+                                                <label key={tab.key} className="flex items-center gap-3 cursor-pointer group">
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${isChecked ? "bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-200" : "bg-white border-slate-300 text-transparent group-hover:border-indigo-400"
+                                                        }`}>
+                                                        <CheckCircle2 size={12} strokeWidth={4} />
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="hidden"
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setRolePermissions(prev => {
+                                                                const list = prev[role] || [];
+                                                                return {
+                                                                    ...prev,
+                                                                    [role]: checked ? [...list, tab.key] : list.filter(k => k !== tab.key)
+                                                                }
+                                                            });
+                                                        }}
+                                                    />
+                                                    <span className={`text-xs font-semibold ${isChecked ? 'text-slate-700' : 'text-slate-500 group-hover:text-slate-600'} transition-colors`}>{tab.label}</span>
+                                                </label>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Kolom Kanan: Menu Sidebar */}
+                <div className="xl:col-span-5 flex flex-col h-full">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full">
+                        <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <Settings size={18} className="text-slate-400" /> Sidebar & Navigasi
+                            </h3>
+                            <button onClick={addGroup} className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 transition-colors shadow-sm">
+                                <Plus size={14} /> Grup Menu
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {groups.map((g, gIdx) => {
+                                const unselectedTabs = AVAILABLE_TABS.filter(t => !g.keys.includes(t.key));
+
+                                return (
+                                    <div key={gIdx} className="border border-slate-200 rounded-xl bg-slate-50/70 p-4 relative group transition-all hover:bg-slate-50 hover:shadow-md hover:border-slate-300">
+                                        {/* Header Group */}
+                                        <div className="flex justify-between items-start xl:items-center mb-4 gap-3 flex-col xl:flex-row">
+                                            <input
+                                                type="text"
+                                                value={g.title}
+                                                onChange={(e) => updateGroupTitle(gIdx, e.target.value)}
+                                                className="font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full xl:w-56 shadow-sm"
+                                                placeholder="Nama Grup (Msl: Transaksi)"
+                                            />
+
+                                            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-sm shrink-0">
+                                                <button onClick={() => moveGroup(gIdx, -1)} disabled={gIdx === 0} title="Geser ke Atas" className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-30 disabled:hover:bg-transparent"><ArrowUp size={14} /></button>
+                                                <button onClick={() => moveGroup(gIdx, 1)} disabled={gIdx === groups.length - 1} title="Geser ke Bawah" className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded disabled:opacity-30 disabled:hover:bg-transparent"><ArrowDown size={14} /></button>
+                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                                <button onClick={() => removeGroup(gIdx)} title="Hapus Grup" className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"><Trash2 size={14} /></button>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+
+                                        {/* List Aktif */}
+                                        <div className="space-y-2 mb-4">
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 pl-1 mb-2">Item Navigasi (Sesuai Urutan):</div>
+                                            {g.keys.length === 0 ? (
+                                                <div className="text-xs text-slate-400 italic p-3 border border-dashed border-slate-300 rounded-xl text-center bg-slate-50/50">Grup ini kosong. Klik tombol di bawah.</div>
+                                            ) : (
+                                                g.keys.map((tabKey, tabIdx) => (
+                                                    <div key={tabKey} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-2 shadow-sm relative group/item hover:border-slate-300 transition-colors">
+                                                        <div className="text-xs text-slate-400 font-mono w-5 font-bold text-right shrink-0">{tabIdx + 1}.</div>
+                                                        <input
+                                                            type="text"
+                                                            value={tabNames[tabKey] !== undefined ? tabNames[tabKey] : getDefaultLabel(tabKey)}
+                                                            onChange={(e) => updateTabName(tabKey, e.target.value)}
+                                                            className="w-full text-xs font-semibold text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 focus:bg-white border focus:border-indigo-300 border-transparent rounded px-2 py-1.5 outline-none transition-colors pr-16"
+                                                            placeholder={getDefaultLabel(tabKey)}
+                                                        />
+
+                                                        {/* Controls Tab */}
+                                                        <div className="absolute right-2 flex items-center gap-0.5 opacity-100 xl:opacity-0 xl:group-hover/item:opacity-100 transition-opacity bg-white/90 px-1 rounded-md backdrop-blur-sm shadow-sm border border-slate-100">
+                                                            <button disabled={tabIdx === 0} onClick={() => moveTabInGroup(gIdx, tabIdx, -1)} className="p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded disabled:opacity-30"><ArrowUp size={12} /></button>
+                                                            <button disabled={tabIdx === g.keys.length - 1} onClick={() => moveTabInGroup(gIdx, tabIdx, 1)} className="p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded disabled:opacity-30"><ArrowDown size={12} /></button>
+                                                            <div className="w-px h-3 bg-slate-200 mx-0.5"></div>
+                                                            <button onClick={() => removeTabFromGroup(gIdx, tabKey)} className="p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded"><Trash2 size={12} /></button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        {/* List Tersedia */}
+                                        {unselectedTabs.length > 0 && (
+                                            <div className="mt-4 pt-3 border-t border-slate-200/60">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {unselectedTabs.map(tab => (
+                                                        <button
+                                                            key={tab.key}
+                                                            title={`Tambahkan halaman ${tab.label}`}
+                                                            onClick={() => addTabToGroup(gIdx, tab.key)}
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-bold border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-sm"
+                                                        >
+                                                            <Plus size={10} strokeWidth={3} /> {tabNames[tab.key] !== undefined ? tabNames[tab.key] : tab.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700 leading-relaxed italic">
+                            <span className="font-bold border-b border-indigo-200 pb-0.5">Tips Navigasi:</span> Area menu bisa diubah urutannya (atas/bawah), diubah nama tampilannya (ketik langsung pada list angka), hingga dihapus.
+                        </div>
                     </div>
                 </div>
-
             </div>
         </div>
     );

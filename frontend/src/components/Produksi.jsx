@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { formatRupiah, formatTanggal } from "@/lib/format";
-import { Clock, CheckCircle2, PackageCheck, Paintbrush, Printer as PrinterIcon, ListFilter, Search, Image as ImageIcon, CalendarHeart } from "lucide-react";
+import { Clock, CheckCircle2, PackageCheck, Paintbrush, Printer as PrinterIcon, ListFilter, Search, Image as ImageIcon, CalendarHeart, Flame } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { toast } from "sonner";
 import { api } from "../lib/api";
@@ -37,7 +37,9 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
 
     const filteredSales = useMemo(() => {
         let result = sales;
-        if (activeFilter !== "Semua") {
+        if (activeFilter === "Prioritas") {
+            result = result.filter(s => s.is_prioritas);
+        } else if (activeFilter !== "Semua") {
             result = result.filter(s => (s.status_produksi || "Selesai") === activeFilter);
         }
         if (search.trim()) {
@@ -48,11 +50,18 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
                 (s.pembeli || "").toLowerCase().includes(q)
             );
         }
+        // Prioritas naik ke atas, lalu terbaru di atas
+        result = [...result].sort((a, b) => {
+            if (a.is_prioritas !== b.is_prioritas) return a.is_prioritas ? -1 : 1;
+            const dateA = new Date(a.created_at || a.tanggal || 0);
+            const dateB = new Date(b.created_at || b.tanggal || 0);
+            return dateB - dateA;
+        });
         return result;
     }, [sales, activeFilter, search]);
 
     const counts = useMemo(() => {
-        const c = { Semua: sales.length };
+        const c = { Semua: sales.length, Prioritas: sales.filter(s => s.is_prioritas).length };
         STATUSES.forEach(st => {
             c[st] = sales.filter(s => (s.status_produksi || "Selesai") === st).length;
         });
@@ -76,6 +85,17 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
             onUpdated && onUpdated();
         } catch (e) {
             toast.error("Gagal mengubah status");
+        }
+    };
+
+    const togglePrioritas = async (sale) => {
+        try {
+            const next = !sale.is_prioritas;
+            await api.updateSalePrioritas(sale.id, next);
+            toast.success(next ? `⚡ ${sale.nota_no} ditandai Prioritas!` : `${sale.nota_no} dihapus dari Prioritas`);
+            onUpdated && onUpdated();
+        } catch (e) {
+            toast.error("Gagal mengubah prioritas");
         }
     };
 
@@ -103,6 +123,20 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
             {/* Filter Tabs */}
             <div className="flex items-center gap-2 flex-wrap">
                 <ListFilter size={15} className="text-slate-400 shrink-0" />
+                {/* Prioritas tab khusus */}
+                <button
+                    onClick={() => setActiveFilter("Prioritas")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${activeFilter === "Prioritas"
+                        ? "bg-red-500 text-white border-red-500 shadow-sm"
+                        : "bg-red-50 text-red-600 border-red-200 hover:border-red-400"
+                        }`}
+                >
+                    <Flame size={12} />
+                    Prioritas
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${activeFilter === "Prioritas" ? "bg-white/20 text-white" : "bg-red-100 text-red-600"
+                        }`}>{counts["Prioritas"]}</span>
+                </button>
+                <div className="w-px h-5 bg-slate-200"></div>
                 {["Semua", ...STATUSES].map(st => (
                     <button
                         key={st}
@@ -133,8 +167,9 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
                                 <th className="px-4 py-3">Pembeli</th>
                                 <th className="px-4 py-3 text-center">Qty</th>
                                 <th className="px-4 py-3 text-right">Total</th>
-                                <th className="px-4 py-3">Tanggal & Tenggat</th>
+                                <th className="px-4 py-3">Tanggal &amp; Tenggat</th>
                                 <th className="px-4 py-3 text-center">Bayar</th>
+                                <th className="px-4 py-3 text-center w-10">⚡</th>
                                 <th className="px-4 py-3 text-center w-36">Status Produksi</th>
                             </tr>
                         </thead>
@@ -151,12 +186,22 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
                                     return (
                                         <tr
                                             key={sale.id}
-                                            className={`hover:bg-slate-50/70 transition-colors border-l-4 ${STATUS_ROW_ACCENT[st] || "border-l-transparent"}`}
+                                            className={`hover:bg-slate-50/70 transition-colors border-l-4 ${sale.is_prioritas
+                                                    ? "border-l-red-500 bg-red-50/30"
+                                                    : STATUS_ROW_ACCENT[st] || "border-l-transparent"
+                                                }`}
                                         >
                                             <td className="px-4 py-3.5 text-xs text-slate-400 font-bold">{idx + 1}</td>
 
                                             {/* Nota No */}
                                             <td className="px-4 py-3.5">
+                                                {sale.is_prioritas && (
+                                                    <div className="flex items-center gap-0.5 mb-1">
+                                                        <span className="inline-flex items-center gap-0.5 bg-red-100 text-red-600 border border-red-200 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                            <Flame size={8} /> PRIORITAS
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <span className="font-mono text-xs font-bold text-indigo-600">{sale.nota_no}</span>
                                                 {sale.public_order_id && (
                                                     <div className="flex items-center gap-1.5 mt-1">
@@ -232,6 +277,20 @@ export function Produksi({ sales, onStatusChange, onUpdated }) {
                                                 ) : (
                                                     <span className="inline-block rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">LUNAS</span>
                                                 )}
+                                            </td>
+
+                                            {/* Toggle Prioritas */}
+                                            <td className="px-3 py-3.5 text-center">
+                                                <button
+                                                    onClick={() => togglePrioritas(sale)}
+                                                    title={sale.is_prioritas ? "Hapus Prioritas" : "Tandai Prioritas"}
+                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border mx-auto ${sale.is_prioritas
+                                                            ? "bg-red-500 border-red-500 text-white shadow-md shadow-red-200 hover:bg-red-600"
+                                                            : "bg-white border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-500"
+                                                        }`}
+                                                >
+                                                    <Flame size={14} />
+                                                </button>
                                             </td>
 
                                             {/* Status Produksi Dropdown */}

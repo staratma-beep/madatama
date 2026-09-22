@@ -207,6 +207,12 @@ function App() {
 
   const tabs = allTabs.filter(t => {
     if (authUser?.role === "Owner") return true;
+
+    // Ambil izin dinamis dari pengaturan, kalau belum ada fallback ke konfigurasi default standar
+    if (settings?.role_permissions?.[authUser?.role]) {
+      return settings.role_permissions[authUser?.role].includes(t.key);
+    }
+
     if (authUser?.role === "Kasir") return ["dashboard", "pesanan-web", "hpp", "kas", "produksi", "riwayat-nota", "piutang", "web", "theme-settings"].includes(t.key);
     if (authUser?.role === "Produksi") return ["produksi"].includes(t.key);
     return false;
@@ -292,7 +298,7 @@ function App() {
           {/* ===== DASHBOARD SECTION MOVED INSIDE TABS ===== */}
 
           {/* ===== FIXED COSTS BAR ===== */}
-          {tab === "kas" && authUser?.role === "Owner" && (
+          {tab === "kas" && (
             <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
           )}
 
@@ -300,7 +306,7 @@ function App() {
           <div className="rounded-2xl border border-indigo-100/60 bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
             {/* Tab Content */}
             <div className="p-5 overflow-x-auto">
-              {tab === "dashboard" && authUser?.role !== "Produksi" && (
+              {tab === "dashboard" && (
                 <Dashboard
                   cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}
                   piutang={totalPiutang} utang={totalUtang} labaProduk={labaProduk} omzet={omzet}
@@ -308,25 +314,25 @@ function App() {
                   sales={sales}
                 />
               )}
-              {tab === "kas" && authUser?.role !== "Produksi" && (
+              {tab === "kas" && (
                 <BukuKas
                   transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance} profile={settings} sales={sales}
                   onAdd={handleAdd} onEdit={handleEdit} onDelete={handleDelete}
                 />
               )}
-              {tab === "hpp" && authUser?.role !== "Produksi" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} role={authUser?.role} />}
-              {tab === "rekap" && authUser?.role === "Owner" && <RekapBulanan transactions={transactions} />}
-              {tab === "labarugi" && authUser?.role === "Owner" && (
+              {tab === "hpp" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} role={authUser?.role} />}
+              {tab === "rekap" && <RekapBulanan transactions={transactions} />}
+              {tab === "labarugi" && (
                 <LabaRugi transactions={transactions} sales={sales} profitShares={profitShares} onMarkShared={markShared} onUnmarkShared={unmarkShared} />
               )}
-              {tab === "piutang" && authUser?.role !== "Produksi" && (
+              {tab === "piutang" && (
                 <PiutangUtang records={records} onCreate={createRecord} onSettle={settleRecord} onUnsettle={unsettleRecord} onDelete={deleteRecord} />
               )}
               {tab === "produksi" && (
                 <Produksi sales={sales} onStatusChange={api.updateSaleStatus} onUpdated={reload} role={authUser?.role} />
               )}
               {tab === "riwayat-nota" && <RiwayatNota onSaleUpdate={reload} />}
-              {tab === "log" && authUser?.role === "Owner" && <LogAktivitas />}
+              {tab === "log" && <LogAktivitas />}
               {tab === "pesanan-web" && <WebOrdersTab onAccepted={reload} />}
               {tab === "web" && <WebSettingsTab />}
               {tab === "theme-settings" && <ThemeSettingsTab />}
