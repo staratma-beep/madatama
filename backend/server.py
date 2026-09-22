@@ -33,10 +33,16 @@ api_router = APIRouter(prefix="/api")
 
 @app.get("/uploads/{filename}")
 async def get_upload_file(filename: str):
+    from fastapi.responses import FileResponse
+    from starlette.responses import Response
     path = os.path.join(ROOT_DIR, "uploads", filename)
     if not os.path.exists(path):
         raise HTTPException(404, "File not found")
-    return FileResponse(path)
+    response = FileResponse(path)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+    return response
 
 
 def now_iso():
@@ -197,6 +203,8 @@ class Sale(BaseModel):
     piutang_record_id: Optional[str] = None
     status_produksi: str = "Selesai"  # "Desain", "Cetak", "Finishing", "Selesai", "Diambil"
     public_order_id: Optional[str] = None
+    custom_image: Optional[str] = None
+    tenggat_waktu: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -214,6 +222,8 @@ class SaleCreate(BaseModel):
     dp_amount: float = 0
     status_produksi: Optional[str] = None
     public_order_id: Optional[str] = None
+    custom_image: Optional[str] = None
+    tenggat_waktu: Optional[str] = None
 
 class ActivityLog(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -575,6 +585,8 @@ async def create_sale(input: SaleCreate):
         piutang_record_id=piutang_record.id if piutang_record else None,
         status_produksi=status_prod,
         public_order_id=input.public_order_id,
+        custom_image=input.custom_image or None,
+        tenggat_waktu=input.tenggat_waktu or None,
     )
     await db.sales.insert_one(sale.model_dump())
     if input.product_id:
@@ -621,15 +633,46 @@ async def update_sale_status(sid: str, payload: dict):
         if po_id:
             all_sales = await db.sales.find({"public_order_id": po_id}).to_list(100)
             if all_sales:
-                all_selesai = True
-                for s in all_sales:
-                    if s.get("status_produksi") != "Selesai":
-                        all_selesai = False
-                        break
-                po_status = "Selesai" if all_selesai else "Diterima (Sedang Diproses)"
+                # Determine the overall status based on all production items
+                statuses = [s.get("status_produksi", "Desain") for s in all_sales]
+                
+                # Priority order from most advanced to least
+                STATUS_PRIORITY = ["Diambil", "Selesai", "Finishing", "Cetak", "Desain"]
+                
+                all_diambil = all(s == "Diambil" for s in statuses)
+                all_selesai_or_diambil = all(s in ("Selesai", "Diambil") for s in statuses)
+                any_selesai = any(s in ("Selesai", "Diambil") for s in statuses)
+                
+                if all_diambil:
+                    po_status = "Diambil"
+                elif all_selesai_or_diambil:
+                    po_status = "Siap Diambil"
+                elif any_selesai:
+                    po_status = "Sedang Diproses"
+                else:
+                    # Find the most advanced status among all items
+                    for prio in STATUS_PRIORITY:
+                        if prio in statuses:
+                            po_status = f"Sedang {prio}"
+                            break
+                    else:
+                        po_status = "Diterima (Sedang Diproses)"
+                
                 await db.public_orders.update_one({"id": po_id}, {"$set": {"status": po_status}})
                 
     return {"ok": True, "status_produksi": new_status}
+
+@api_router.patch("/sales/{sid}/deadline")
+async def update_sale_deadline(sid: str, payload: dict):
+    deadline = payload.get("tenggat_waktu")
+    sale = await db.sales.find_one({"id": sid}, {"_id": 0})
+    if not sale:
+        raise HTTPException(404, "Sale not found")
+        
+    await db.sales.update_one({"id": sid}, {"$set": {"tenggat_waktu": deadline}})
+    await add_log("Produksi", f"Tenggat waktu pesanan {sale['nota_no']} diupdate menjadi {deadline or 'Kosong'}")
+
+    return {"ok": True, "tenggat_waktu": deadline}
 
 # ---------------- Settings ----------------
 @api_router.get("/settings", response_model=Settings)
@@ -756,7 +799,11 @@ class PublicOrderItem(BaseModel):
 class PublicOrderCreate(BaseModel):
     nama: str
     kontak: str
+    otp_pin: str
     items: List[PublicOrderItem]
+
+class OTPRequest(BaseModel):
+    kontak: str
 
 @api_router.get("/public/settings")
 async def public_get_settings():
@@ -770,8 +817,61 @@ async def public_get_products():
     prods = await db.products.find({"is_public": True}, {"_id": 0}).to_list(100)
     return prods
 
+@api_router.post("/public/request-otp")
+async def public_request_otp(req: OTPRequest):
+    import random
+    from datetime import datetime, timedelta
+    
+    # Anti-spam: Cek apakah baru saja request dalam 1 menit yang lalu
+    recent_otp = await db.otp_requests.find_one({
+        "kontak": req.kontak,
+        "created_at": {"$gte": (datetime.utcnow() - timedelta(seconds=60)).isoformat()}
+    })
+    
+    if recent_otp:
+        raise HTTPException(status_code=429, detail="Harap tunggu 1 menit sebelum meminta kode baru.")
+    
+    pin = str(random.randint(1000, 9999))
+    expires_at = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
+    
+    await db.otp_requests.insert_one({
+        "kontak": req.kontak,
+        "pin": pin,
+        "created_at": datetime.utcnow().isoformat(),
+        "expires_at": expires_at,
+        "used": False
+    })
+    
+    # [WA API GATEWAY MOCK]
+    # Di sini tempat eksekusi HTTP Request ke vendor WhatsApp (Fonnte/Wablas dll)
+    # Karena belum di set up, kita print ke logger (memaksa flush agar muncul di Windows)
+    import sys
+    print(f"\n" + "="*50, flush=True)
+    print(f"✅ MENGIRIM KODE OTP WHATSAPP", flush=True)
+    print(f"Ke Nomor : {req.kontak}", flush=True)
+    print(f"Teks     : Halo! Kode rahasia Order Madatama Anda adalah: {pin}. Jangan berikan kode ini kepada siapapun.", flush=True)
+    print("="*50 + "\n", flush=True)
+    
+    return {"ok": True, "message": "Kode OTP berhasil dikirim", "dev_pin": pin}
+
 @api_router.post("/public/orders")
 async def public_create_order(req: PublicOrderCreate):
+    from datetime import datetime
+    
+    # Validasi OTP
+    otp_doc = await db.otp_requests.find_one({
+        "kontak": req.kontak,
+        "pin": req.otp_pin,
+        "used": False,
+        "expires_at": {"$gte": datetime.utcnow().isoformat()}
+    })
+    
+    if not otp_doc:
+        raise HTTPException(status_code=400, detail="Kode PIN tidak valid atau sudah kedaluwarsa.")
+        
+    # Tandai OTP sudah terpakai
+    await db.otp_requests.update_one({"_id": otp_doc["_id"]}, {"$set": {"used": True}})
+
     order_id = "ORD-" + str(uuid.uuid4())[:8].upper()
     doc = {
         "id": order_id,
@@ -805,48 +905,67 @@ async def public_pay_order(order_id: str, payload: PaymentSubmit):
 
 @api_router.get("/public/track/{order_id}")
 async def public_track_order(order_id: str):
-    # Could be tracking from public_orders or from sales (nota)
     po = await db.public_orders.find_one({"id": order_id}, {"_id": 0})
     if po:
         sales = await db.sales.find({"public_order_id": order_id}, {"_id": 0}).to_list(100)
         items = []
-        overall_status = po.get("status")
         total_tagihan = 0
+        
+        # Build items list with actual production status
         if sales:
-            if overall_status == "Menunggu Konfirmasi": 
-                # If they have sales but status is still awaiting, although logic in front sets it to Diterima, let's just make it SEDANG DIPROSES if not finished
-                overall_status = "Menunggu Pembayaran" if not po.get('bukti_bayar') else "SEDANG DIPROSES"
-            elif overall_status == "Diterima (Sedang Diproses)":
-                overall_status = "Menunggu Pembayaran" if not po.get('bukti_bayar') else "SEDANG DIPROSES"
-                
-            all_done = True
             for s in sales:
                 total_tagihan += s.get("total", 0)
                 items.append({
                     "nama": s["nama"],
                     "qty": s["qty"],
-                    "status": s.get("status_produksi", "Menunggu")
+                    "status": s.get("status_produksi", "Menunggu"),
+                    "nota_no": s.get("nota_no", ""),
                 })
-                if s.get("status_produksi") != "Selesai":
-                    all_done = False
-                    
-            if all_done:
-                overall_status = "SELESAI"
-                
+        
+        # Compute overall_status dynamically from production statuses
+        if sales:
+            statuses = [s.get("status_produksi", "Desain") for s in sales]
+            all_diambil = all(s == "Diambil" for s in statuses)
+            all_selesai_or_diambil = all(s in ("Selesai", "Diambil") for s in statuses)
+            any_finishing_plus = any(s in ("Finishing", "Selesai", "Diambil") for s in statuses)
+            any_cetak_plus = any(s in ("Cetak", "Finishing", "Selesai", "Diambil") for s in statuses)
+            
+            if all_diambil:
+                overall_status = "Diambil"
+            elif all_selesai_or_diambil:
+                overall_status = "Siap Diambil"
+            elif any_finishing_plus:
+                overall_status = "Finishing"
+            elif any_cetak_plus:
+                overall_status = "Sedang Cetak"
+            else:
+                overall_status = "Sedang Desain"
+            
+            # Override: if public order payment not yet done
+            po_payment_status = po.get("payment_status", "Belum Bayar")
+            if po_payment_status not in ("Lunas",) and not po.get("bukti_bayar"):
+                # No payment yet: flag as awaiting payment only if admin already accepted
+                if po.get("status") not in ("Menunggu Konfirmasi",):
+                    overall_status = "Menunggu Pembayaran"
+        else:
+            # No sales yet: order still being reviewed
+            overall_status = po.get("status", "Menunggu Konfirmasi")
+        
+        # Populate product data for raw items display
         raw_items = po.get("items", [])
         for it in raw_items:
-             if "product_id" in it:
-                  prod = await db.products.find_one({"id": it["product_id"]}, {"_id": 0})
-                  if prod:
-                       it["product"] = prod
+            if "product_id" in it:
+                prod = await db.products.find_one({"id": it["product_id"]}, {"_id": 0})
+                if prod:
+                    it["product"] = prod
 
         return {
-            "id": po["id"], 
+            "id": po["id"],
             "nama": po.get("nama"),
             "created_at": po.get("created_at"),
-            "type": "pesanan", 
+            "type": "pesanan",
             "status": overall_status,
-            "items": raw_items, 
+            "items": raw_items,
             "sales_items": items,
             "total_tagihan": total_tagihan,
             "payment_method": po.get("payment_method"),
@@ -854,7 +973,7 @@ async def public_track_order(order_id: str):
             "payment_status": po.get("payment_status", "Belum Bayar")
         }
     
-    # If not in public orders, check sales (nota) if they use nota as tracking ID
+    # If not in public orders, check sales (nota)
     sale = await db.sales.find_one({"nota_no": order_id}, {"_id": 0})
     if sale:
         return {"id": sale["nota_no"], "type": "produksi", "status": sale.get("status_produksi")}
@@ -886,7 +1005,14 @@ async def get_admin_public_orders():
 
 @api_router.post("/public-orders/{order_id}/accept")
 async def resolve_public_order(order_id: str):
-    await db.public_orders.update_one({"id": order_id}, {"$set": {"status": "Diterima (Sedang Diproses)"}})
+    await db.public_orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "Diterima (Sedang Diproses)",
+            "payment_status": "Menunggu Pembayaran",
+            "accepted_at": now_iso()
+        }}
+    )
     return {"ok": True}
 
 @api_router.delete("/public-orders/{order_id}/hard")
@@ -943,6 +1069,18 @@ async def confirm_public_order_payment(order_id: str):
     return {"ok": True}
 
 app.include_router(api_router)
+
+# Middleware untuk memastikan gambar di /uploads/ bisa dibaca oleh canvas (html2canvas/crossOrigin)
+from starlette.middleware.base import BaseHTTPMiddleware
+class UploadsCORPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/uploads/"):
+            response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+            response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
+
+app.add_middleware(UploadsCORPMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

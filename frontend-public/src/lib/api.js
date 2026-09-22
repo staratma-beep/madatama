@@ -9,6 +9,11 @@ export const getPublicProducts = async () => {
     return rs.data;
 };
 
+export const requestOTP = async (kontak) => {
+    const rs = await api.post('/public/request-otp', { kontak });
+    return rs.data;
+};
+
 export const createPublicOrder = async (orderData) => {
     const rs = await api.post('/public/orders', orderData);
     return rs.data;

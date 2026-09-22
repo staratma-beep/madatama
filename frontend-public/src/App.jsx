@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Search, ChevronRight, Package, Truck, Printer, Phone, Trash2, ArrowLeft, ShoppingCart, CheckCircle2, Image as ImageIcon, Check, Menu, X, User, Copy } from 'lucide-react';
-import { getPublicProducts, createPublicOrder, trackPublicOrder, getPublicSettings, payPublicOrder, uploadImage } from './lib/api';
+import { getPublicProducts, createPublicOrder, trackPublicOrder, getPublicSettings, payPublicOrder, uploadImage, requestOTP } from './lib/api';
 import { Toaster, toast } from 'sonner';
 import { CustomEditor } from './components/CustomEditor';
 
@@ -340,6 +340,19 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
   });
   const [savedIdentities, setSavedIdentities] = useState([]);
 
+  // States for OTP Modal
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpPin, setOtpPin] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (otpCooldown > 0) {
+      timer = setInterval(() => setOtpCooldown(c => c - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('madatama_identity');
@@ -363,30 +376,80 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
     setCart(cart.filter((_, i) => i !== index));
   };
 
+  // Handle 1: Minta OTP
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (cart.length === 0) {
       toast.error("Keranjang masih kosong!");
       return;
     }
+
     setLoading(true);
     try {
+      const data = await requestOTP(formData.kontak);
+      toast.success(`[MODE DEV] PIN ANDA: ${data.dev_pin}`, { duration: 10000 });
+      setShowOtp(true);
+      setOtpCooldown(60);
+      setOtpPin("");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Gagal meminta OTP. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (otpCooldown > 0) return;
+    try {
+      await requestOTP(formData.kontak);
+      toast.success("Kode ulang telah dikirim!");
+      setOtpCooldown(60);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Gagal kirim ulang OTP.");
+    }
+  };
+
+  // Handle 2: Buat Pesanan Asli Sesudah OTP valid
+  const confirmOrder = async (e) => {
+    e.preventDefault();
+    if (!otpPin || otpPin.length !== 4) {
+      toast.error("Masukkan 4-digit PIN dengan benar.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Helper: convert base64 dataURL to Blob tanpa menggunakan fetch (lebih reliable)
+      const dataURLToBlob = (dataURL) => {
+        const [header, base64] = dataURL.split(',');
+        const mime = header.match(/:(.*?);/)[1];
+        const binary = atob(base64);
+        const arr = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+      };
+
       // Map frontend cart format to backend expected items format
       const processedItems = await Promise.all(cart.map(async c => {
         let finalCatatan = c.catatan;
         let finalImage = "";
         if (c.custom_image) {
           try {
-            const res = await fetch(c.custom_image);
-            const blob = await res.blob();
+            let blob;
+            if (c.custom_image.startsWith('data:')) {
+              // Base64 dataURL dari editor desain — konversi langsung ke Blob
+              blob = dataURLToBlob(c.custom_image);
+            } else {
+              // URL eksternal biasa — fetch dulu
+              const res = await fetch(c.custom_image);
+              blob = await res.blob();
+            }
             const file = new File([blob], "custom_design.png", { type: "image/png" });
-            const dt = new FormData();
-            dt.append("file", file);
-            const up = await uploadImage(dt);
-            finalCatatan += `\n[LINK DESAIN KUSTOM: ${up.file_url}]`;
-            finalImage = up.file_url;
+            const url = await uploadImage(file);
+            finalCatatan += `\n[LINK DESAIN KUSTOM: ${url}]`;
+            finalImage = url;
           } catch (err) {
-            console.warn("Gagal upload custom image");
+            console.warn("Gagal upload custom image:", err);
           }
         }
         return { product_id: c.product_id, qty: c.qty, catatan: finalCatatan.trim(), custom_image: finalImage };
@@ -395,8 +458,10 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
       const payload = {
         nama: formData.nama,
         kontak: formData.kontak,
+        otp_pin: otpPin,
         items: processedItems
       };
+
       const res = await createPublicOrder(payload);
 
       // Save identity array for next time auto-fill (up to 5 profiles)
@@ -408,26 +473,26 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
           if (Array.isArray(parsed)) currentIdentities = parsed;
           else currentIdentities = [parsed];
         }
-      } catch (e) { }
+      } catch (err) { }
 
       const newId = { nama: formData.nama, kontak: formData.kontak };
       const nonDups = currentIdentities.filter(i => i.nama !== newId.nama || i.kontak !== newId.kontak);
-      const nextIdentities = [newId, ...nonDups].slice(0, 5);
+      const nextIdentities = [newId, ...nonDups].slice(0, 3);
       localStorage.setItem('madatama_identity', JSON.stringify(nextIdentities));
       setSavedIdentities(nextIdentities);
 
+      setShowOtp(false);
       setCart([]); // Clear cart
       setRecentOrders(curr => {
         const _new = [res.order_id, ...curr.filter(x => x !== res.order_id)].slice(0, 5);
         return _new;
       });
+
       toast.success("Pesanan berhasil dibuat!");
       navigate(`/track?id=${res.order_id}`);
 
-      // Fitur auto-redirect WhatsApp telah dihapus atas permintaan.
-      // Pengguna hanya akan diarahkan ke halaman "Lacak Pesanan".
     } catch (e) {
-      toast.error("Gagal membuat pesanan.");
+      toast.error(e?.response?.data?.detail || "PIN Salah atau Kedaluwarsa.");
     } finally {
       setLoading(false);
     }
@@ -437,152 +502,212 @@ const Cart = ({ cart, setCart, setRecentOrders }) => {
   const estTotal = cart.reduce((acc, c) => acc + ((c.product?.harga_jual * c.qty) || 0), 0);
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+    <>
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
 
-      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 py-2.5 md:py-3.5 px-5 md:px-8 text-white shadow-sm mb-4">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-20 right-40 h-48 w-48 rounded-full bg-indigo-900/20 blur-2xl pointer-events-none"></div>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 py-4 md:py-6 px-5 md:px-8 text-white shadow-sm mb-4">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-20 right-40 h-48 w-48 rounded-full bg-indigo-900/20 blur-2xl pointer-events-none"></div>
+          <div className="absolute left-1/2 -top-16 h-56 w-56 rounded-full bg-purple-400/20 blur-2xl pointer-events-none"></div>
 
-        <div className="relative flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
+              <h1 className="text-xl md:text-3xl font-black text-white flex items-center gap-2.5 mb-1.5 tracking-tight">
+                <ShoppingCart className="text-white/90" size={28} strokeWidth={2.5} /> Keranjang Belanja
+              </h1>
+              <p className="text-indigo-100 opacity-90 max-w-lg text-xs md:text-sm leading-relaxed font-medium">
+                Periksa kembali rancangan produk Anda dan lengkapi detail pengiriman sebelum melanjutkan ke konfirmasi.
+              </p>
+            </div>
+            <div className="flex-none hidden lg:block">
+              <span className="bg-white/20 backdrop-blur-sm border border-white/20 text-white font-bold px-5 py-2 rounded-xl text-sm shadow-sm flex items-center gap-2">
+                <ShoppingCart size={16} /> {cart.length} Produk Tertunda
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-10">
           <div className="flex-1">
-            <h1 className="text-lg md:text-2xl font-black text-white flex items-center gap-2 mb-0.5 tracking-tight">
-              <ShoppingCart className="text-white/90" size={24} strokeWidth={2.5} /> Keranjang Belanja
-            </h1>
-            <p className="text-indigo-100 opacity-90 max-w-lg text-[10px] md:text-xs leading-relaxed font-medium">
-              Periksa kembali rancangan produk Anda dan lengkapi detail pengiriman sebelum melanjutkan ke konfirmasi.
+
+            {cart.length === 0 ? (
+              <div className="bg-white border text-center py-16 rounded-2xl shadow-sm border-slate-100">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart size={36} className="text-slate-300" />
+                </div>
+                <h2 className="text-xl font-black text-slate-700 mb-2">Keranjang Anda kosong</h2>
+                <p className="text-slate-500 mb-6 text-sm">Yuk, mulai cari produk kebutuhan promosi Anda!</p>
+                <Link to="/" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-sm transition-colors text-sm">Mulai Belanja</Link>
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="hidden md:flex items-center gap-4 bg-slate-50 border-b border-slate-200 px-4 py-3 text-xs font-bold text-slate-500">
+                  <div className="flex-1 pl-1.5">Produk</div>
+                  <div className="w-28 text-center">Harga Satuan</div>
+                  <div className="w-28 text-center">Kuantitas</div>
+                  <div className="w-28 text-right pr-4">Total Harga</div>
+                  <div className="w-16 text-center">Aksi</div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {cart.map((item, idx) => (
+                    <div key={idx} className="px-4 py-4 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center gap-3">
+                      <div className="flex flex-1 gap-3 items-center">
+                        <div className="w-16 h-16 flex-none border border-slate-200 bg-slate-50 p-0.5 relative rounded-lg overflow-hidden">
+                          {item.custom_image ? (
+                            <img src={item.custom_image} alt="custom" className="w-full h-full object-cover" />
+                          ) : item.product?.image_url ? (
+                            <img src={item.product?.image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full grid place-items-center text-slate-300"><Package size={20} /></div>
+                          )}
+                          {item.custom_image && <span className="absolute bottom-0 left-0 right-0 bg-indigo-600/90 text-white text-[7px] font-bold py-[1px] text-center">CUSTOM</span>}
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <h3 className="font-bold text-sm text-slate-800 line-clamp-1 leading-tight mb-1.5">{item.product?.nama}</h3>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <span className="shrink-0 font-medium">Catatan:</span>
+                            <input type="text" value={item.catatan} onChange={e => updateItem(idx, 'catatan', e.target.value)} placeholder="(Kosong)" className="flex-1 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-400 py-0.5" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-row items-center justify-between md:w-[440px] flex-none gap-2 sm:gap-4 mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-0 border-slate-100">
+                        <div className="w-28 text-center font-semibold text-slate-600 text-sm hidden md:block">
+                          {formatRupiah(item.product?.harga_jual)}
+                        </div>
+                        <div className="w-28 flex justify-center">
+                          <div className="flex items-center border border-slate-300 bg-white rounded-lg overflow-hidden">
+                            <button onClick={() => updateItem(idx, 'qty', Math.max(1, item.qty - 1))} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors font-bold">-</button>
+                            <input type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} className="w-10 h-8 border-x border-slate-300 bg-transparent text-center text-sm font-bold text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                            <button onClick={() => updateItem(idx, 'qty', item.qty + 1)} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors font-bold">+</button>
+                          </div>
+                        </div>
+                        <div className="w-28 text-right font-bold text-rose-500 text-sm">
+                          {formatRupiah(item.product?.harga_jual * item.qty)}
+                        </div>
+                        <div className="w-16 text-center">
+                          <button onClick={() => removeItem(idx)} className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors">Hapus</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full lg:w-[320px] xl:w-[340px] flex-none">
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm sticky top-24">
+              <h2 className="text-xl font-black text-slate-900 mb-4">Ringkasan Belanja</h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 shadow-sm relative">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Detail Pemesan</p>
+
+                  {savedIdentities.length > 0 && (
+                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mb-2.5 px-0.5 tracking-wider">Pilih Profil Tersimpan</p>
+                      {/* Flex horizontal equal stretch format to prevent clipping */}
+                      <div className="flex gap-1.5 w-full">
+                        {savedIdentities.slice(0, 3).map((id, idx) => {
+                          const isSelected = formData.nama === id.nama && formData.kontak === id.kontak;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setFormData({ nama: id.nama, kontak: id.kontak })}
+                              className={`px-2 py-2.5 rounded-lg text-center border transition-all shadow-sm relative overflow-hidden group flex-1 min-w-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-slate-50 hover:border-indigo-300'}`}
+                            >
+                              <span className={`font-extrabold text-xs truncate w-full z-10 px-1 ${isSelected ? 'text-indigo-800' : 'text-slate-700'}`}>{id.nama}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inputs set side-by-side to save 1 whole vertical row */}
+                  <div className="flex gap-2">
+                    <input required type="text" className="w-1/2 bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm placeholder:font-normal placeholder:text-slate-400" placeholder="Nama..." value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} />
+                    <input required type="tel" className="w-1/2 bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm placeholder:font-normal placeholder:text-slate-400" placeholder="No. WA..." value={formData.kontak} onChange={e => setFormData({ ...formData, kontak: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <div className="flex justify-between items-end mb-4">
+                    <div>
+                      <div className="text-sm font-bold text-slate-500 mb-1">Estimasi Total</div>
+                      <div className="text-2xl font-black text-slate-900 tracking-tight leading-none">{formatRupiah(estTotal)}</div>
+                    </div>
+                    <div className="bg-indigo-50 text-indigo-700 p-2 rounded-lg text-xs leading-tight font-medium max-w-[130px] text-right border border-indigo-100">
+                      WA <b>pembayaran final</b>
+                    </div>
+                  </div>
+
+                  <button type="submit" disabled={loading || cart.length === 0} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 group">
+                    {loading ? 'Memproses...' : 'Beli Sekarang'} {!loading && <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* OTP Modal */}
+      {showOtp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-[2px] p-4">
+          <form onSubmit={confirmOrder} className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative overflow-hidden text-center border border-slate-100">
+            <div className="w-16 h-16 bg-indigo-50 border border-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 size={32} className="text-indigo-600" />
+            </div>
+
+            <h2 className="text-xl font-black text-slate-900 mb-1 tracking-tight">Verifikasi WhatsApp</h2>
+            <p className="text-xs text-slate-500 mb-6 font-medium leading-relaxed px-2">
+              Demi keamanan, kami telah mengirimkan 4-Digit PIN ke WhatsApp <strong className="text-slate-700">{formData.kontak}</strong>.
             </p>
-          </div>
-          <div className="flex-none hidden lg:block">
-            <span className="bg-white/20 backdrop-blur-sm border border-white/20 text-white font-bold px-4 py-1.5 rounded-lg text-xs shadow-sm flex items-center justify-center">
-              {cart.length} Produk Tertunda
-            </span>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex flex-col lg:flex-row gap-10">
-        <div className="flex-1">
+            <input
+              type="text"
+              value={otpPin}
+              onChange={(e) => setOtpPin(e.target.value.replace(/[^0-9]/g, ''))}
+              maxLength={4}
+              className="w-full text-center tracking-[1.5em] text-3xl font-black mb-5 bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-inner"
+              placeholder="••••"
+              required
+              autoFocus
+            />
 
-          {cart.length === 0 ? (
-            <div className="bg-white border text-center py-10 rounded-2xl shadow-sm border-slate-100">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <ShoppingCart size={32} className="text-slate-300" />
-              </div>
-              <h2 className="text-lg font-bold text-slate-700 mb-1">Keranjang Anda kosong</h2>
-              <p className="text-slate-500 mb-4 text-xs">Yuk, mulai cari produk kebutuhan promosi Anda!</p>
-              <Link to="/" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg shadow-sm transition-colors text-[11px]">Mulai Belanja</Link>
-            </div>
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="hidden md:flex items-center gap-4 bg-slate-50 border-b border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-500">
-                <div className="flex-1 pl-1.5">Produk</div>
-                <div className="w-24 text-center">Harga Satuan</div>
-                <div className="w-28 text-center">Kuantitas</div>
-                <div className="w-28 text-right pr-4">Total Harga</div>
-                <div className="w-16 text-center">Aksi</div>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {cart.map((item, idx) => (
-                  <div key={idx} className="px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center gap-3">
-                    <div className="flex flex-1 gap-3 items-center">
-                      <div className="w-14 h-14 flex-none border border-slate-200 bg-slate-50 p-0.5 relative rounded-md overflow-hidden">
-                        {item.custom_image ? (
-                          <img src={item.custom_image} alt="custom" className="w-full h-full object-cover" />
-                        ) : item.product?.image_url ? (
-                          <img src={item.product?.image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full grid place-items-center text-slate-300"><Package size={20} /></div>
-                        )}
-                        {item.custom_image && <span className="absolute bottom-0 left-0 right-0 bg-indigo-600/90 text-white text-[7px] font-bold py-[1px] text-center">CUSTOM</span>}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h3 className="font-bold text-xs text-slate-800 line-clamp-1 leading-tight mb-1">{item.product?.nama}</h3>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                          <span className="shrink-0 font-medium">Catatan:</span>
-                          <input type="text" value={item.catatan} onChange={e => updateItem(idx, 'catatan', e.target.value)} placeholder="(Kosong)" className="flex-1 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-400 py-0.5" />
-                        </div>
-                      </div>
-                    </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-sm transition-all mb-4 disabled:opacity-50"
+            >
+              {loading ? "Memverifikasi..." : "Konfirmasi & Beli Sekarang"}
+            </button>
 
-                    <div className="flex flex-row items-center justify-between md:w-[430px] flex-none gap-2 sm:gap-4 mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-0 border-slate-100">
-                      <div className="w-24 text-center font-semibold text-slate-600 text-[11px] hidden md:block">
-                        {formatRupiah(item.product?.harga_jual)}
-                      </div>
-                      <div className="w-28 flex justify-center">
-                        <div className="flex items-center border border-slate-300 bg-white rounded-sm overflow-hidden">
-                          <button onClick={() => updateItem(idx, 'qty', Math.max(1, item.qty - 1))} className="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">-</button>
-                          <input type="number" min="1" value={item.qty} onChange={e => updateItem(idx, 'qty', parseInt(e.target.value) || 1)} className="w-8 h-6 border-x border-slate-300 bg-transparent text-center text-[10px] font-bold text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                          <button onClick={() => updateItem(idx, 'qty', item.qty + 1)} className="w-6 h-6 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">+</button>
-                        </div>
-                      </div>
-                      <div className="w-28 text-right font-bold text-rose-500 text-[11px]">
-                        {formatRupiah(item.product?.harga_jual * item.qty)}
-                      </div>
-                      <div className="w-16 text-center">
-                        <button onClick={() => removeItem(idx)} className="text-[10px] font-semibold text-slate-400 hover:text-red-500 transition-colors">Hapus</button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="w-full lg:w-[300px] xl:w-[320px] flex-none">
-          <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm sticky top-20">
-            <h2 className="text-base font-black text-slate-900 mb-2.5">Ringkasan Belanja</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="space-y-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 shadow-sm relative">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-0.5">Detail Pemesan</p>
-                {savedIdentities.length > 0 && (
-                  <div className="bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
-                    <p className="text-[8px] text-slate-400 font-bold uppercase mb-1.5 px-0.5">Pilih Profil Tersimpan</p>
-                    <div className="flex flex-wrap gap-1">
-                      {savedIdentities.map((id, idx) => {
-                        const isSelected = formData.nama === id.nama && formData.kontak === id.kontak;
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setFormData({ nama: id.nama, kontak: id.kontak })}
-                            className={`px-2.5 py-1.5 rounded-md text-left border transition-all flex flex-col min-w-[30%] flex-1 shadow-sm relative overflow-hidden group ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-slate-50 hover:border-indigo-300'}`}
-                          >
-                            <span className={`font-extrabold text-[9px] truncate w-full z-10 ${isSelected ? 'text-indigo-800' : 'text-slate-700'}`}>{id.nama}</span>
-                            <span className={`font-mono text-[8px] mt-0.5 z-10 ${isSelected ? 'text-indigo-600 font-semibold' : 'text-slate-500'}`}>{id.kontak}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <input required type="text" className="w-full bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm placeholder:font-normal placeholder:text-slate-400" placeholder="Nama Lengkap Pemesan" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} />
-                  <input required type="tel" className="w-full bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm placeholder:font-normal placeholder:text-slate-400" placeholder="Nomor WhatsApp" value={formData.kontak} onChange={e => setFormData({ ...formData, kontak: e.target.value })} />
-                </div>
-              </div>
-
-              <div className="pt-0.5">
-                <div className="flex justify-between items-center mb-0.5">
-                  <span className="text-[10px] font-bold text-slate-500">Estimasi Total</span>
-                </div>
-                <div className="text-xl font-black text-slate-900 mb-2 tracking-tight">{formatRupiah(estTotal)}</div>
-
-                <div className="bg-indigo-50 text-indigo-700 p-2 rounded-lg text-[9px] leading-tight mb-3 font-medium border border-indigo-100">
-                  <span className="font-bold text-indigo-800">Info:</span> Harga final dikonfirmasi via WA.
-                </div>
-
-                <button type="submit" disabled={loading || cart.length === 0} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 group">
-                  {loading ? 'Memproses...' : 'Beli Sekarang'} {!loading && <ChevronRight size={14} className="group-hover:translate-x-1" />}
+            <div className="text-xs font-semibold text-slate-500">
+              Belum menerima kode?{" "}
+              {otpCooldown > 0 ? (
+                <span className="text-slate-400">Kirim ulang dalam {otpCooldown}s</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  className="text-indigo-600 hover:text-indigo-700 font-bold underline cursor-pointer transition-colors"
+                >
+                  Kirim Ulang
                 </button>
-              </div>
-            </form>
-          </div>
+              )}
+            </div>
+
+            <button type="button" onClick={() => setShowOtp(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+              <X size={16} />
+            </button>
+          </form>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 
@@ -834,25 +959,34 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
 
             {(() => {
               const st = (result.status || '').toLowerCase();
-              let theme = { bg: "bg-slate-900", text: "text-slate-400", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", blur: "bg-indigo-500" };
+              let theme = { bg: "bg-slate-900", text: "text-slate-400", badge: "bg-slate-500/20 text-slate-300 border-slate-500/30", dot: "bg-slate-400", blur: "bg-slate-500" };
 
-              if (st.includes('selesai')) {
-                theme = { bg: "bg-emerald-950", text: "text-emerald-400/80", badge: "bg-emerald-500/30 text-emerald-300 border-emerald-500/40", dot: "bg-emerald-400", blur: "bg-emerald-500" };
-              } else if (st.includes('proses')) {
-                theme = { bg: "bg-indigo-950", text: "text-indigo-400/80", badge: "bg-indigo-500/30 text-indigo-300 border-indigo-500/40", dot: "bg-indigo-400", blur: "bg-indigo-500" };
-              } else if (st.includes('siap') || st.includes('ambil')) {
+              if (st.includes('diambil') && !st.includes('siap')) {
+                // Already picked up
+                theme = { bg: "bg-slate-800", text: "text-slate-400/80", badge: "bg-slate-500/30 text-slate-300 border-slate-500/40", dot: "bg-slate-400", blur: "bg-slate-500" };
+              } else if (st.includes('siap')) {
+                // Ready to pick up
                 theme = { bg: "bg-teal-950", text: "text-teal-400/80", badge: "bg-teal-500/30 text-teal-300 border-teal-500/40", dot: "bg-teal-400", blur: "bg-teal-500" };
+              } else if (st.includes('finishing')) {
+                theme = { bg: "bg-purple-950", text: "text-purple-400/80", badge: "bg-purple-500/30 text-purple-300 border-purple-500/40", dot: "bg-purple-400", blur: "bg-purple-500" };
+              } else if (st.includes('cetak')) {
+                theme = { bg: "bg-orange-950", text: "text-orange-400/80", badge: "bg-orange-500/30 text-orange-300 border-orange-500/40", dot: "bg-orange-400", blur: "bg-orange-500" };
+              } else if (st.includes('desain') || st.includes('proses')) {
+                theme = { bg: "bg-indigo-950", text: "text-indigo-400/80", badge: "bg-indigo-500/30 text-indigo-300 border-indigo-500/40", dot: "bg-indigo-400", blur: "bg-indigo-500" };
+              } else if (st.includes('selesai')) {
+                theme = { bg: "bg-emerald-950", text: "text-emerald-400/80", badge: "bg-emerald-500/30 text-emerald-300 border-emerald-500/40", dot: "bg-emerald-400", blur: "bg-emerald-500" };
+              } else if (st.includes('bayar') || st.includes('konfirmasi')) {
+                // Waiting for payment
+                theme = { bg: "bg-amber-950", text: "text-amber-400/80", badge: "bg-amber-500/30 text-amber-300 border-amber-500/40", dot: "bg-amber-400", blur: "bg-amber-500" };
               } else if (st.includes('batal') || st.includes('tolak')) {
                 theme = { bg: "bg-rose-950", text: "text-rose-400/80", badge: "bg-rose-500/30 text-rose-300 border-rose-500/40", dot: "bg-rose-400", blur: "bg-rose-500" };
-              } else {
-                theme = { bg: "bg-amber-950", text: "text-amber-500/80", badge: "bg-amber-500/30 text-amber-300 border-amber-500/40", dot: "bg-amber-400", blur: "bg-amber-500" };
               }
 
               return (
                 <div className={`relative ${theme.bg} px-4 sm:px-5 py-2.5 sm:py-3 flex flex-col sm:flex-row justify-between sm:items-center gap-1.5 overflow-hidden rounded-t-xl transition-colors duration-500`}>
                   <div className={`absolute top-0 right-0 w-48 h-48 ${theme.blur} opacity-20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-colors duration-500`}></div>
                   <div className="relative z-10 w-full">
-                    <p className={`${theme.text} text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5 flex items-center gap-1.5`}><Truck size={12} /> ID & PEMESAN</p>
+                    <p className={`${theme.text} text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-0.5 flex items-center gap-1.5`}><Truck size={13} /> ID & PEMESAN</p>
                     <div className="flex items-center gap-2 sm:gap-2.5">
                       <h2 className="font-mono font-black text-base sm:text-lg text-white tracking-tight leading-none break-all flex items-center gap-1.5">
                         {result.id}
@@ -867,8 +1001,8 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
                     </div>
                   </div>
                   <div className="relative z-10 sm:text-right flex-none">
-                    <p className={`${theme.text} text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5 hidden sm:block`}>STATUS PESANAN</p>
-                    <div className={`inline-flex items-center gap-1.5 ${theme.badge} font-extrabold px-3 py-1.5 rounded-md text-[9px] uppercase tracking-wider backdrop-blur-sm shadow-inner transition-colors duration-500`}>
+                    <p className={`${theme.text} text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-0.5 hidden sm:block`}>STATUS PESANAN</p>
+                    <div className={`inline-flex items-center gap-1.5 ${theme.badge} font-extrabold px-3 py-1.5 rounded-md text-xs uppercase tracking-wider backdrop-blur-sm shadow-inner transition-colors duration-500`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${theme.dot} animate-pulse`}></span>
                       {result.status}
                     </div>
@@ -882,7 +1016,7 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
                 <div className="mt-2 mb-6">
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
                     <table className="w-full border-collapse text-left min-w-[500px] bg-white">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-extrabold text-slate-400 tracking-widest">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-extrabold text-slate-400 tracking-widest">
                         <tr>
                           <th className="p-4">ITEM PESANAN</th>
                           <th className="p-4 w-24">JUMLAH</th>
@@ -905,17 +1039,17 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="font-extrabold text-sm text-slate-800 line-clamp-1 mb-1 leading-snug">{it.product?.nama || "Produk"}</p>
-                                    <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider inline-block">
+                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider inline-block">
                                       {it.catatan ? it.catatan.replace(/\[LINK DESAIN KUSTOM:.*?\]/g, '').trim() || 'Desain Terlampir' : 'Katalog Standar'}
                                     </span>
                                   </div>
                                 </div>
                               </td>
                               <td className="p-4">
-                                <span className="font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md text-xs">{it.qty} <span className="text-[9px] opacity-60 ml-0.5">PCS</span></span>
+                                <span className="font-extrabold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md text-sm">{it.qty} <span className="text-xs opacity-60 ml-0.5">PCS</span></span>
                               </td>
                               <td className="p-4 text-center">
-                                <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider ${statusProduksi === 'Selesai' ? 'bg-emerald-50 text-emerald-700' : statusProduksi === 'Menunggu' ? 'bg-slate-100 text-slate-600' : statusProduksi === 'Desain' ? 'bg-indigo-100 text-indigo-700 animate-pulse' : 'bg-amber-50 text-amber-700 animate-pulse'}`}>
+                                <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-black uppercase tracking-wider ${statusProduksi === 'Selesai' ? 'bg-emerald-50 text-emerald-700' : statusProduksi === 'Menunggu' ? 'bg-slate-100 text-slate-600' : statusProduksi === 'Desain' ? 'bg-indigo-100 text-indigo-700 animate-pulse' : 'bg-amber-50 text-amber-700 animate-pulse'}`}>
                                   {statusProduksi}
                                 </span>
                               </td>
@@ -931,7 +1065,7 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
               {result.status === "Menunggu Pembayaran" && result.total_tagihan > 0 && (
                 <div className="border border-indigo-100 bg-indigo-50/50 rounded-2xl p-5 mt-6 animate-in slide-in-from-top-2 relative">
                   <h3 className="font-black text-indigo-900 text-lg mb-1">Penyelesaian Pembayaran</h3>
-                  <p className="text-[11px] text-indigo-700/80 mb-5 leading-relaxed">Pesanan Anda telah disetujui. Selesaikan pembayaran sesuai total tagihan agar segera kami proses ke tahap produksi.</p>
+                  <p className="text-sm text-indigo-700/80 mb-5 leading-relaxed">Pesanan Anda telah disetujui. Selesaikan pembayaran sesuai total tagihan agar segera kami proses ke tahap produksi.</p>
 
                   <div className="bg-white shadow-sm rounded-xl p-4 border border-indigo-100/50 mb-5 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-purple-400"></div>
@@ -992,8 +1126,8 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-200 rounded-full blur-3xl -mr-12 -mt-12 opacity-30 group-hover:opacity-50 transition-opacity"></div>
                     <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 flex-none relative z-10 animate-in zoom-in"><CheckCircle2 size={14} strokeWidth={2.5} /></div>
                     <div className="relative z-10">
-                      <h5 className="text-[10px] font-black uppercase tracking-[0.1em] mb-0.5 text-emerald-900">Pembayaran Terverifikasi</h5>
-                      <p className="text-[10px] font-medium leading-relaxed text-emerald-700/80">Menunggu konfirmasi pelunasan oleh pihak toko.</p>
+                      <h5 className="text-xs font-black uppercase tracking-[0.1em] mb-0.5 text-emerald-900">Pembayaran Terverifikasi</h5>
+                      <p className="text-xs font-medium leading-relaxed text-emerald-700/80">Menunggu konfirmasi pelunasan oleh pihak toko.</p>
                     </div>
                   </div>
                 )}
@@ -1001,8 +1135,8 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
                   <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-200 rounded-full blur-3xl -mr-12 -mt-12 opacity-20 group-hover:opacity-40 transition-opacity"></div>
                   <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-none relative z-10"><Phone size={14} strokeWidth={2.5} /></div>
                   <div className="relative z-10">
-                    <h5 className="text-[10px] font-black uppercase tracking-[0.1em] mb-0.5 text-slate-800">CS Representative</h5>
-                    <p className="text-[10px] font-medium leading-relaxed text-slate-500">Admin akan segera menghubungi via WhatsApp terkait info lanjut.</p>
+                    <h5 className="text-xs font-black uppercase tracking-[0.1em] mb-0.5 text-slate-800">CS Representative</h5>
+                    <p className="text-xs font-medium leading-relaxed text-slate-500">Admin akan segera menghubungi via WhatsApp terkait info lanjut.</p>
                   </div>
                 </div>
               </div>
@@ -1010,7 +1144,7 @@ const TrackOrder = ({ recentOrders, setRecentOrders }) => {
               <a
                 href={`https://wa.me/6281234567890?text=Halo%20Admin%20Madatama,%20saya%20mengecek%20pesanan%20saya%20dengan%20nomor%20resi%20*${result.id}*.%20Apakah%20bisa%20dibantu?`}
                 target="_blank" rel="noopener noreferrer"
-                className="w-full mt-4 bg-[#25D366] hover:bg-[#20bd5a] active:bg-[#1da851] text-white font-extrabold py-3 rounded-xl shadow-[0_8px_20px_-6px_rgba(37,211,102,0.5)] hover:shadow-[0_12px_24px_-6px_rgba(37,211,102,0.6)] transition-all flex justify-center items-center gap-2 text-xs tracking-wide transform hover:-translate-y-0.5"
+                className="w-full mt-4 bg-[#25D366] hover:bg-[#20bd5a] active:bg-[#1da851] text-white font-extrabold py-3.5 rounded-xl shadow-[0_8px_20px_-6px_rgba(37,211,102,0.5)] hover:shadow-[0_12px_24px_-6px_rgba(37,211,102,0.6)] transition-all flex justify-center items-center gap-2 text-sm tracking-wide transform hover:-translate-y-0.5"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" /></svg>
                 Konsultasi Resi dengan WhatsApp CS

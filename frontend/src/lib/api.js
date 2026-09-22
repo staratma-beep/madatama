@@ -39,6 +39,7 @@ export const api = {
   createSale: (d) => http.post("/sales", d).then((r) => r.data),
   deleteSale: (id) => http.delete(`/sales/${id}`).then((r) => r.data),
   updateSaleStatus: (id, status) => http.patch(`/sales/${id}/status`, { status_produksi: status }).then((r) => r.data),
+  updateSaleDeadline: (id, deadline) => http.patch(`/sales/${id}/deadline`, { tenggat_waktu: deadline }).then((r) => r.data),
 
   backup: () => http.get("/backup").then((r) => r.data),
   restore: (d) => http.post("/restore", d).then((r) => r.data),

@@ -51,12 +51,98 @@ export const CustomEditor = ({ product, onClose, onAddToCart }) => {
         // Give time for selection handles to disappear
         setTimeout(async () => {
             let dataUrl = null;
+
+            // Strategi 1: html2canvas dengan useCORS (butuh header CORS dari server)
             try {
-                const canvas = await html2canvas(canvasRef.current, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: false, logging: false });
+                const canvas = await html2canvas(canvasRef.current, {
+                    backgroundColor: null,
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false,
+                    imageTimeout: 5000,
+                });
                 dataUrl = canvas.toDataURL("image/png");
             } catch (err) {
-                console.warn("Kesalahan html2canvas (CORS/Masking), menggunakan fallback senyap.", err);
-                toast.error("Gagal membuat thumbnail 3D presisi tinggi, namun pesanan Anda TETAP diteruskan secara sistem!");
+                console.warn("html2canvas gagal, coba fallback canvas manual:", err);
+            }
+
+            // Strategi 2: Fallback — canvas HTML5 manual (render elemen satu per satu)
+            if (!dataUrl) {
+                try {
+                    const W = 400, H = 500;
+                    const fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = W * 2;
+                    fallbackCanvas.height = H * 2;
+                    const ctx = fallbackCanvas.getContext('2d');
+                    ctx.scale(2, 2);
+
+                    // Background warna dasar
+                    ctx.fillStyle = baseColor;
+                    ctx.fillRect(0, 0, W, H);
+
+                    // Gambar produk jika ada (lewat Image() crossOrigin)
+                    const imgSrc = product.color_images?.[baseColor] || product.image_url;
+                    if (imgSrc) {
+                        try {
+                            await new Promise((res, rej) => {
+                                const img = new Image();
+                                img.crossOrigin = 'anonymous';
+                                img.onload = () => {
+                                    ctx.globalCompositeOperation = baseColor !== '#ffffff' ? 'multiply' : 'source-over';
+                                    ctx.drawImage(img, 0, 0, W, H);
+                                    ctx.globalCompositeOperation = 'source-over';
+                                    res();
+                                };
+                                img.onerror = rej;
+                                img.src = imgSrc + '?cors=' + Date.now();
+                                setTimeout(rej, 3000);
+                            });
+                        } catch (e) {
+                            console.warn("Gambar produk tidak bisa dimuat ke canvas:", e);
+                        }
+                    }
+
+                    // Render elemen desain (teks & logo)
+                    for (const el of elements) {
+                        if (el.type === 'text') {
+                            ctx.save();
+                            ctx.font = `900 ${el.fontSize || 28}px ${el.font || 'Inter'}`;
+                            ctx.fillStyle = el.color || '#ffffff';
+                            ctx.textBaseline = 'top';
+                            // Render multi-line
+                            const lines = (el.content || '').split('\n');
+                            lines.forEach((line, i) => {
+                                let text = line;
+                                if (el.textTransform === 'uppercase') text = text.toUpperCase();
+                                else if (el.textTransform === 'lowercase') text = text.toLowerCase();
+                                else if (el.textTransform === 'capitalize') text = text.replace(/\b\w/g, c => c.toUpperCase());
+                                ctx.fillText(text, el.x, el.y + i * ((el.fontSize || 28) * 1.2));
+                            });
+                            ctx.restore();
+                        } else if (el.type === 'image' && el.src) {
+                            try {
+                                await new Promise((res, rej) => {
+                                    const img = new Image();
+                                    img.onload = () => {
+                                        ctx.drawImage(img, el.x, el.y, parseFloat(el.width) || 100, parseFloat(el.height) || 100);
+                                        res();
+                                    };
+                                    img.onerror = rej;
+                                    img.src = el.src;
+                                    setTimeout(rej, 3000);
+                                });
+                            } catch (e) { /* skip element */ }
+                        }
+                    }
+
+                    dataUrl = fallbackCanvas.toDataURL('image/png');
+                } catch (fbErr) {
+                    console.error("Fallback canvas juga gagal:", fbErr);
+                    toast.error("Gagal membuat desain. Silakan coba lagi.");
+                    setIsRendering(false);
+                    return;
+                }
             }
 
             try {
@@ -194,7 +280,7 @@ export const CustomEditor = ({ product, onClose, onAddToCart }) => {
                         </div>
                     </div>
                 </div>
-{/* Sidebar Tools (Bottom on Mobile, Left on Desktop because of md:order-first) */}
+                {/* Sidebar Tools (Bottom on Mobile, Left on Desktop because of md:order-first) */}
                 <div className="w-full md:w-80 bg-white border-t md:border-t-0 md:border-r border-slate-100 flex flex-col shrink-0 z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] h-[55%] md:h-full md:order-first">
                     {/* Desktop Header (Hidden on Mobile) */}
                     <div className="hidden md:flex p-6 border-b border-slate-100 justify-between items-start bg-slate-50/50">
@@ -314,7 +400,7 @@ export const CustomEditor = ({ product, onClose, onAddToCart }) => {
                     </div>
                 </div>
 
-                            </div>
+            </div>
         </div>
     );
 };

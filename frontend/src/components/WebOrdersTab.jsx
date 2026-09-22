@@ -141,7 +141,8 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                 pembeli: o.nama,
                                 product_id: it.product_id,
                                 status_produksi: "Desain",
-                                public_order_id: o.id
+                                public_order_id: o.id,
+                                custom_image: it.custom_image || null
                             });
                         }
                         await api.resolvePublicOrder(o.id);
@@ -190,7 +191,8 @@ export const WebOrdersTab = ({ onAccepted }) => {
                     pembeli: accepting.nama,
                     product_id: it.product_id,
                     status_produksi: "Desain",
-                    public_order_id: accepting.id
+                    public_order_id: accepting.id,
+                    custom_image: it.custom_image || null
                 });
             }
             await api.resolvePublicOrder(accepting.id);
@@ -214,9 +216,16 @@ export const WebOrdersTab = ({ onAccepted }) => {
         }
     };
 
+    // Tab filter logic:
+    // - "Pesanan Baru": belum di-Acc (Menunggu Konfirmasi admin)
+    // - "Cek Pembayaran": sudah di-Acc, pelanggan sudah/belum upload bukti, tapi belum Lunas
+    // - "Riwayat Selesai": Lunas / sudah selesai sepenuhnya
     const pendingOrders = orders.filter(o => o.status === "Menunggu Konfirmasi");
-    const pendingPayments = orders.filter(o => o.payment_status === "Menunggu Konfirmasi Bayar");
-    const historyOrders = orders.filter(o => o.status !== "Menunggu Konfirmasi" && o.payment_status !== "Menunggu Konfirmasi Bayar");
+    const pendingPayments = orders.filter(o =>
+        o.status !== "Menunggu Konfirmasi" &&
+        o.payment_status !== "Lunas"
+    );
+    const historyOrders = orders.filter(o => o.payment_status === "Lunas");
 
     const displayedOrders = activeTab === "baru" ? pendingOrders : activeTab === "bayar" ? pendingPayments : historyOrders;
 
@@ -381,10 +390,14 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                             <td className="px-6 py-3.5 align-middle text-center border-l-transparent">
                                                 {activeTab === 'bayar' ? (
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 shadow-sm px-3 py-1 rounded-full border border-amber-200 uppercase tracking-wider">Menunggu Bayar</span>
+                                                        {o.payment_status === "Menunggu Konfirmasi Bayar" ? (
+                                                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 shadow-sm px-3 py-1 rounded-full border border-amber-200 uppercase tracking-wider">Bukti Terkirim</span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-slate-600 bg-slate-100 shadow-sm px-3 py-1 rounded-full border border-slate-200 uppercase tracking-wider">Menunggu Bayar</span>
+                                                        )}
                                                         {o.bukti_bayar && (
                                                             <a href={o.bukti_bayar} target="_blank" rel="noreferrer" className="text-[10px] flex gap-1.5 items-center font-bold text-indigo-700 mt-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full transition-colors hover:bg-indigo-600 hover:text-white shadow-sm">
-                                                                <ImageIcon size={12} /> Bukti TF
+                                                                <ImageIcon size={12} /> Lihat Bukti
                                                             </a>
                                                         )}
                                                     </div>
@@ -408,7 +421,11 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                             <button onClick={() => handleStartAccept(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><CheckSquare size={14} /> Acc</button>
                                                         )}
                                                         {activeTab === 'bayar' && (
-                                                            <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Lunas</button>
+                                                            o.payment_status === "Menunggu Konfirmasi Bayar" ? (
+                                                                <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Konfirmasi Lunas</button>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-400 italic">Menunggu pelanggan bayar</span>
+                                                            )
                                                         )}
 
                                                         <button title="Edit Pesanan" onClick={() => {
