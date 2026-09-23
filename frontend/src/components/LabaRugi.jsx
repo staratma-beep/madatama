@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "./ui/select";
-import { CheckCircle2, RotateCcw, Users, PiggyBank, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, RotateCcw, Users, PiggyBank, ChevronDown, ChevronUp, PieChart } from "lucide-react";
 
 const Row = ({ label, value, className, sub }) => (
   <div className="flex flex-wrap items-center justify-between py-2.5 border-b border-slate-100/80 last:border-0 hover:bg-slate-50 px-3 -mx-3 rounded-lg transition-colors">
@@ -85,8 +85,10 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-heading text-xl font-bold text-slate-900">Laba Rugi &amp; Bagi Hasil</h2>
-          <p className="text-sm text-slate-500">Ringkasan bulanan dengan alokasi laba yang bisa dikustomisasi</p>
+          <h2 className="text-[20px] font-bold text-slate-800 flex items-center gap-2">
+            <PieChart size={20} className="text-slate-700" /> Laba Rugi & Bagi Hasil
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">Ringkasan bulanan dengan alokasi laba yang bisa dikustomisasi</p>
         </div>
         <Select value={bulan} onValueChange={setBulan}>
           <SelectTrigger className="w-56" data-testid="labarugi-bulan"><SelectValue /></SelectTrigger>
@@ -98,7 +100,7 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
 
       {/* Pengaturan Alokasi (collapsible) */}
       {!shared && d.laba > 0 && (
-        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
+        <div className="rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border border-indigo-200 bg-indigo-50/60 p-4">
           <button
             className="flex w-full items-center justify-between text-sm font-bold text-indigo-700"
             onClick={() => setShowSettings((s) => !s)}
@@ -151,9 +153,9 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Kolom Kiri: Ringkasan Laba Rugi (Accrual) */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border border-slate-200 bg-white p-4">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">Pendapatan Penjualan</p>
           <Row label="Omzet (Pendapatan Kotor)" value={omzetTarget} className="text-emerald-700" />
           <Row label="Total HPP (Harga Modal)" value={hppTarget} className="text-red-500" />
@@ -188,9 +190,9 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
         </div>
 
         {/* Kolom Kanan: Bagi Hasil */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {/* Banner Laba */}
-          <div className={`rounded-2xl p-6 text-white ${d.laba >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-red-500 to-red-700"}`} data-testid="profit-share-card">
+          <div className={`rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-5 text-white ${d.laba >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-red-500 to-red-700"}`} data-testid="profit-share-card">
             <p className="text-sm font-semibold uppercase tracking-wider opacity-90">
               {d.laba >= 0 ? "Laba Bersih" : "Rugi Bersih"} — {monthLabel(bulan)}
             </p>
@@ -223,7 +225,7 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
           </div>
 
           {/* Panel Bagi Hasil */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border border-slate-200 bg-white p-4">
             <div className="mb-4 flex items-center gap-2 text-slate-700">
               <Users size={18} />
               <p className="font-semibold">Rincian Bagi Hasil</p>

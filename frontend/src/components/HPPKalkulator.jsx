@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet, FileSpreadsheet, Truck, Search, Globe, Image } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet, FileSpreadsheet, Truck, Search, Globe, Image, Calculator } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -288,25 +288,25 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
       : 0;
 
     return (
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm" data-testid={`hpp-table-${kategori}`}>
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+      <div className="w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse whitespace-nowrap relative min-w-[850px]" data-testid={`hpp-table-${kategori}`}>
+            <thead className="bg-[#f7f7f7] border-b border-slate-200 text-slate-600 text-[13px] font-medium shadow-none">
               <tr>
-                <th className="px-3 py-3 min-w-[160px]">Nama Produk</th>
-                <th className="px-3 py-3">Jenis</th>
-                <th className="px-3 py-3 text-right">Stok</th>
-                <th className="px-3 py-3 text-right">Bahan Baku</th>
-                <th className="px-3 py-3 text-right">Jasa Mitra</th>
-                <th className="px-3 py-3 text-right">Tambahan</th>
-                <th className="px-3 py-3 text-right">Total HPP</th>
-                <th className="px-3 py-3 text-right">Harga Jual</th>
-                <th className="px-3 py-3 text-right">Laba</th>
-                <th className="px-3 py-3 text-right">Margin</th>
-                <th className="px-3 py-3 text-right">Aksi</th>
+                <th className="px-4 py-2.5 min-w-[160px] border-r border-slate-100/50">Nama Produk</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50">Jenis</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Stok</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Bahan Baku</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Jasa Mitra</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Tambahan</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Total HPP</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Harga Jual</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Laba</th>
+                <th className="px-4 py-2.5 border-r border-slate-100/50 text-right">Margin</th>
+                <th className="px-4 py-2.5 text-right w-[150px]">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {items.map((r) => {
                 const hpp = parseNumber(r.bahan_baku) + parseNumber(r.jasa_mitra) + parseNumber(r.tambahan);
                 const harga = parseNumber(r.harga_jual);
@@ -318,13 +318,13 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                 const marginBagus = margin >= 30;
                 const marginCukup = margin >= 15 && margin < 30;
                 return (
-                  <tr key={r.id} className={`group hover:bg-indigo-50/30 transition-colors ${stokKritis ? "bg-red-50/30" : ""}`} data-testid={`hpp-row-${r.id}`}>
-                    <td className="px-3 py-2">
-                      <Input value={r.nama} onChange={(e) => setField(r.id, "nama", e.target.value)} onBlur={() => persist(r.id)} className="h-9 min-w-[150px] border-0 bg-transparent px-1 focus:bg-white focus:border focus:border-slate-200" data-testid={`hpp-nama-${r.id}`} />
+                  <tr key={r.id} className={`group hover:bg-[#f9fafb] transition-colors ${stokKritis ? "bg-rose-50" : "bg-white"}`} data-testid={`hpp-row-${r.id}`}>
+                    <td className="px-4 py-2">
+                      <Input value={r.nama} onChange={(e) => setField(r.id, "nama", e.target.value)} onBlur={() => persist(r.id)} className="h-8 text-[13px] min-w-[150px] border-0 bg-transparent px-1 focus:bg-white focus:border focus:border-slate-200" data-testid={`hpp-nama-${r.id}`} />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-2">
                       <Select value={r.jenis} onValueChange={(v) => persistNow(r.id, { jenis: v })}>
-                        <SelectTrigger className="h-9 w-28" data-testid={`hpp-jenis-${r.id}`}><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-8 text-[13px] w-28 bg-transparent border-transparent hover:bg-slate-50 focus:border-slate-300" data-testid={`hpp-jenis-${r.id}`}><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Sendiri">Sendiri</SelectItem>
                           <SelectItem value="Mitra">Mitra</SelectItem>
@@ -332,71 +332,73 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-2">
                       <div className="flex items-center justify-end gap-1">
                         <div className="relative">
                           <Input type="number" value={r.stok ?? 0} onChange={(e) => setField(r.id, "stok", e.target.value)} onBlur={() => persist(r.id)}
-                            className={`h-9 w-16 text-right font-mono-num font-bold ${stokKritis ? "text-red-600 border-red-300 bg-red-50" :
-                              stokRendah ? "text-amber-600 border-amber-200 bg-amber-50" :
-                                "text-slate-700"
+                            className={`h-8 w-16 text-right text-[13px] font-mono-num font-semibold ${stokKritis ? "text-rose-600 border-rose-300 bg-white" :
+                              stokRendah ? "text-amber-600 border-amber-200 bg-white" :
+                                "text-slate-700 hover:bg-slate-50 bg-transparent border-transparent focus:border-slate-300 focus:bg-white"
                               }`}
                             data-testid={`hpp-stok-${r.id}`}
                           />
-                          {stokKritis && <span className="absolute -top-1.5 -right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />}
+                          {stokKritis && <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />}
                         </div>
-                        <button type="button" onClick={() => openTambahStok(r)} className="grid h-7 w-7 flex-none place-items-center rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="Tambah stok" data-testid={`hpp-tambah-stok-${r.id}`}>
-                          <PackagePlus size={15} />
+                        <button type="button" onClick={() => openTambahStok(r)} className="grid h-8 w-8 flex-none place-items-center rounded bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm transition-all opacity-0 group-hover:opacity-100" title="Tambah stok" data-testid={`hpp-tambah-stok-${r.id}`}>
+                          <PackagePlus size={14} />
                         </button>
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-right"><NumCell value={r.bahan_baku} onChange={(v) => setField(r.id, "bahan_baku", v)} onBlur={() => persist(r.id)} testId={`hpp-bahan-${r.id}`} /></td>
-                    <td className="px-3 py-2 text-right"><NumCell value={r.jasa_mitra} onChange={(v) => setField(r.id, "jasa_mitra", v)} onBlur={() => persist(r.id)} testId={`hpp-jasa-${r.id}`} /></td>
-                    <td className="px-3 py-2 text-right"><NumCell value={r.tambahan} onChange={(v) => setField(r.id, "tambahan", v)} onBlur={() => persist(r.id)} testId={`hpp-tambahan-${r.id}`} /></td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold text-slate-600" data-testid={`hpp-total-${r.id}`}>{formatRupiah(hpp)}</td>
-                    <td className="px-3 py-2 text-right"><NumCell value={r.harga_jual} onChange={(v) => setField(r.id, "harga_jual", v)} onBlur={() => persist(r.id)} testId={`hpp-harga-${r.id}`} /></td>
-                    <td className={`whitespace-nowrap px-3 py-2 text-right font-mono-num font-semibold ${laba >= 0 ? "text-emerald-600" : "text-red-600"}`} data-testid={`hpp-laba-${r.id}`}>{formatRupiah(laba)}</td>
-                    <td className="px-3 py-2 text-right" data-testid={`hpp-margin-${r.id}`}>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-bold ${harga <= 0 ? "bg-slate-100 text-slate-400" :
-                        marginBagus ? "bg-emerald-100 text-emerald-700" :
-                          marginCukup ? "bg-amber-100 text-amber-700" :
-                            "bg-red-100 text-red-600"
+                    <td className="px-4 py-2 text-right"><NumCell value={r.bahan_baku} onChange={(v) => setField(r.id, "bahan_baku", v)} onBlur={() => persist(r.id)} testId={`hpp-bahan-${r.id}`} /></td>
+                    <td className="px-4 py-2 text-right"><NumCell value={r.jasa_mitra} onChange={(v) => setField(r.id, "jasa_mitra", v)} onBlur={() => persist(r.id)} testId={`hpp-jasa-${r.id}`} /></td>
+                    <td className="px-4 py-2 text-right"><NumCell value={r.tambahan} onChange={(v) => setField(r.id, "tambahan", v)} onBlur={() => persist(r.id)} testId={`hpp-tambahan-${r.id}`} /></td>
+                    <td className="whitespace-nowrap px-4 py-2 text-right font-mono-num font-semibold text-slate-800" data-testid={`hpp-total-${r.id}`}>{formatRupiah(hpp)}</td>
+                    <td className="px-4 py-2 text-right"><NumCell value={r.harga_jual} onChange={(v) => setField(r.id, "harga_jual", v)} onBlur={() => persist(r.id)} testId={`hpp-harga-${r.id}`} /></td>
+                    <td className={`whitespace-nowrap px-4 py-2 text-right font-mono-num font-semibold ${laba >= 0 ? "text-emerald-700" : "text-rose-600"}`} data-testid={`hpp-laba-${r.id}`}>{formatRupiah(laba)}</td>
+                    <td className="px-4 py-2 text-right" data-testid={`hpp-margin-${r.id}`}>
+                      <span className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold ${harga <= 0 ? "bg-slate-100 text-slate-500" :
+                        marginBagus ? "bg-[#bbf7d0] text-[#14532d]" :
+                          marginCukup ? "bg-[#fef08a] text-[#713f12]" :
+                            "bg-rose-100 text-rose-700"
                         }`}>
                         {harga > 0 ? `${margin.toFixed(1)}%` : "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <Button size="sm" className="mr-1 h-8 bg-emerald-600 px-2.5 hover:bg-emerald-700 shadow-sm" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
-                        <ShoppingCart size={13} className="mr-1" /> Jual
-                      </Button>
-                      <button onClick={() => { setWebRow(r); setWebMenuOpen(true); }} className={`mr-2 align-middle transition-colors ${r.is_public ? 'text-indigo-500 hover:text-indigo-700' : 'text-slate-300 hover:text-indigo-500'}`} title="Toko Online">
-                        <Globe size={16} />
-                      </button>
-                      <button onClick={() => setToDelete(r)} className="text-slate-200 hover:text-red-500 align-middle transition-colors" data-testid={`hpp-delete-${r.id}`}>
-                        <Trash2 size={15} />
-                      </button>
+                    <td className="whitespace-nowrap px-4 py-2 text-right w-[150px]">
+                      <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="sm" className="h-8 bg-[#1a1a1a] hover:bg-black text-white shadow-sm px-2.5" onClick={() => openJual(r)} data-testid={`hpp-jual-${r.id}`}>
+                          Jual
+                        </Button>
+                        <button onClick={() => { setWebRow(r); setWebMenuOpen(true); }} className={`grid shrink-0 h-8 w-8 place-items-center rounded bg-white border border-slate-200 transition-colors shadow-sm hover:bg-slate-50 ${r.is_public ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-700'}`} title="Toko Online">
+                          <Globe size={13} />
+                        </button>
+                        <button onClick={() => setToDelete(r)} className="grid shrink-0 h-8 w-8 place-items-center rounded bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 shadow-sm transition-colors" data-testid={`hpp-delete-${r.id}`}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
               })}
               {items.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-slate-400">Belum ada produk di kategori ini. Klik "+ Tambah Produk" di bawah.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-12 text-center text-slate-400">Belum ada produk di kategori ini. Klik "+ Tambah Produk" di bawah.</td></tr>
               )}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-200 bg-slate-50">
-                <td colSpan={9} className="px-3 py-3 text-right text-sm font-semibold text-slate-600">Rata-rata Margin {kategori}</td>
-                <td className="px-3 py-3 text-right font-mono-num font-bold text-indigo-600" data-testid={`hpp-avg-margin-${kategori}`}>{avgMargin.toFixed(1)}%</td>
+              <tr className="border-t border-slate-200 bg-[#f9fafb]">
+                <td colSpan={9} className="px-4 py-3 text-right font-medium text-slate-700">Rata-rata Margin {kategori}</td>
+                <td className="px-4 py-3 text-right font-mono-num font-bold text-slate-800" data-testid={`hpp-avg-margin-${kategori}`}>{avgMargin.toFixed(1)}%</td>
                 <td></td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3">
-          <Button variant="outline" size="sm" className="border-dashed" onClick={() => addRow(kategori)} data-testid={`hpp-add-${kategori}`}>
-            <Plus size={14} className="mr-1" /> Tambah Produk
+        <div className="flex flex-wrap gap-2 border-t border-slate-200 p-3 bg-white w-full">
+          <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50 text-slate-700 shadow-sm border-slate-200 font-medium" onClick={() => addRow(kategori)} data-testid={`hpp-add-${kategori}`}>
+            Tambah Produk
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { setSalinKategori(kategori); setSalinMargin("30"); setSalinOpen(true); }} data-testid={`hpp-salin-${kategori}`}>
-            <Percent size={14} className="mr-1" /> Samakan Margin
+          <Button variant="outline" size="sm" className="bg-white hover:bg-slate-50 text-slate-700 shadow-sm border-slate-200 font-medium" onClick={() => { setSalinKategori(kategori); setSalinMargin("30"); setSalinOpen(true); }} data-testid={`hpp-salin-${kategori}`}>
+            Samakan Margin
           </Button>
         </div>
       </div>
@@ -414,34 +416,36 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="font-heading text-xl font-bold text-slate-900">Kalkulator HPP Produk</h2>
+          <h2 className="text-[20px] font-bold text-slate-800 flex items-center gap-2">
+            <Calculator size={20} className="text-slate-700" /> Kalkulator HPP Produk
+          </h2>
           <p className="text-sm text-slate-500">Hitung HPP, margin & laba. Klik <span className="font-semibold text-emerald-600">Jual</span> untuk catat penjualan ke Buku Kas secara instan.</p>
         </div>
       </div>
 
       {/* KPI Cards Bulan Ini */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Omzet {monthLabel(curMonth).split(" ")[0]}</p>
-          <p className="mt-2 font-mono-num text-xl font-bold">{formatRupiah(totalOmzet)}</p>
-          <p className="mt-0.5 text-xs opacity-70">{totalQty} unit terjual</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+          <p className="text-[12px] font-medium text-slate-500 mb-1">Omzet {monthLabel(curMonth).split(" ")[0]}</p>
+          <p className="font-mono-num text-2xl font-bold text-slate-900">{formatRupiah(totalOmzet)}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{totalQty} unit terjual</p>
         </div>
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-4 text-white shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Laba Produk</p>
-          <p className="mt-2 font-mono-num text-xl font-bold">{formatRupiah(totalLabaProduk)}</p>
-          <p className="mt-0.5 text-xs opacity-70">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+          <p className="text-[12px] font-medium text-slate-500 mb-1">Laba Produk</p>
+          <p className="font-mono-num text-2xl font-bold text-slate-900">{formatRupiah(totalLabaProduk)}</p>
+          <p className="mt-1 text-[11px] text-slate-500">
             {totalOmzet > 0 ? `Margin ${((totalLabaProduk / totalOmzet) * 100).toFixed(1)}%` : "Belum ada nota"}
           </p>
         </div>
-        <div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-4 text-white shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-80">Jumlah Nota</p>
-          <p className="mt-2 font-mono-num text-xl font-bold">{monthSales.length}</p>
-          <p className="mt-0.5 text-xs opacity-70">{aggList.length} produk berbeda</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+          <p className="text-[12px] font-medium text-slate-500 mb-1">Jumlah Nota</p>
+          <p className="font-mono-num text-2xl font-bold text-slate-900">{monthSales.length}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{aggList.length} produk berbeda</p>
         </div>
       </div>
 
       {/* Produk Terlaris */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5" data-testid="produk-terlaris">
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]" data-testid="produk-terlaris">
         <div className="mb-4 flex items-center gap-2">
           <Trophy size={18} className="text-amber-500" />
           <h3 className="font-heading text-base font-bold text-slate-900">Produk Terlaris — {monthLabel(curMonth)}</h3>
@@ -494,35 +498,39 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
 
 
 
-      {/* Tabs Produk per Kategori */}
-      <Tabs value={tab} onValueChange={setTab}>
-        <div className="flex flex-col sm:flex-row gap-3 mb-4 sm:items-center justify-between">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3 bg-slate-100" data-testid="hpp-kategori-tabs">
+      {/* Tabs Produk per Kategori matched to BukuKas Theme */}
+      <div className="rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.1)] bg-white overflow-hidden flex flex-col mt-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between p-2 border-b border-slate-200 bg-white relative z-10 w-full gap-3">
+          <div className="flex items-center gap-1 font-sans flex-wrap sm:flex-nowrap w-full sm:w-auto">
             {KATEGORI.map((k) => (
-              <TabsTrigger key={k} value={k} className="data-[state=active]:bg-white data-[state=active]:text-indigo-700" data-testid={`hpp-tab-${k}`}>
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-3 py-1.5 text-[13px] font-semibold rounded-md shadow-sm transition-colors whitespace-nowrap flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${tab === k ? 'bg-[#f1f2f4] text-slate-800' : 'text-slate-500 hover:bg-slate-50 border border-transparent shadow-none'}`}
+                data-testid={`hpp-tab-${k}`}
+              >
                 {k}
-                <span className="ml-1.5 hidden rounded-full bg-slate-200 px-1.5 text-[10px] font-bold text-slate-600 sm:inline">
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${tab === k ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
                   {rows.filter((r) => r.kategori === k).length}
                 </span>
-              </TabsTrigger>
+              </button>
             ))}
-          </TabsList>
+          </div>
 
-          <div className="relative w-full sm:w-64 flex-none">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <Input
+          <div className="relative w-full sm:w-[260px] pr-2 sm:pr-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+            <input
+              type="text"
               placeholder={`Cari di ${tab}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 w-full bg-white border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="pl-8 pr-3 py-1.5 text-[13px] w-full border border-slate-200 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
             />
           </div>
         </div>
 
-        {KATEGORI.map((k) => (
-          <TabsContent key={k} value={k} className="mt-0">{renderTable(k)}</TabsContent>
-        ))}
-      </Tabs>
+        {renderTable(tab)}
+      </div>
 
       <Dialog open={jualOpen} onOpenChange={setJualOpen}>
         <DialogContent className="sm:max-w-md" data-testid="jual-dialog">

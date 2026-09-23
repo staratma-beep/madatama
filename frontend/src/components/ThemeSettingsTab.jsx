@@ -192,13 +192,12 @@ export const ThemeSettingsTab = () => {
 
     return (
         <div className="w-full flex flex-col gap-6 pb-10">
-            {/* Header Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 bg-transparent sticky top-0 z-20">
                 <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
-                        <Settings className="text-indigo-600" /> Pengaturan Web Admin
+                    <h2 className="text-[20px] font-bold flex items-center gap-2 text-slate-800">
+                        <Settings size={20} className="text-slate-700" /> Pengaturan Web Admin
                     </h2>
-                    <p className="text-slate-500 text-sm mt-1">Atur profil usaha, tampilan, dan navigasi sidebar untuk menyempurnakan pengalaman Anda.</p>
+                    <p className="text-sm text-slate-500 mt-1">Atur profil usaha, tampilan, dan navigasi sidebar untuk menyempurnakan pengalaman Anda.</p>
                 </div>
                 <button onClick={handleSave} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md shrink-0">
                     <Save size={18} /> Simpan Perubahan
@@ -211,7 +210,7 @@ export const ThemeSettingsTab = () => {
                 <div className="xl:col-span-7 flex flex-col gap-6">
 
                     {/* Profil Usaha & Kas */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Building2 size={18} className="text-slate-400" /> Profil Usaha & Pengaturan Kas
                         </h3>
@@ -284,7 +283,7 @@ export const ThemeSettingsTab = () => {
                     </div>
 
                     {/* Tema Visual & Mode Gelap */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
                         <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Palette size={18} className="text-slate-400" /> Warna Tema Aplikasi
                         </h3>
@@ -325,7 +324,7 @@ export const ThemeSettingsTab = () => {
                     </div>
 
                     {/* Hak Akses User */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
                         <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Building2 size={18} className="text-slate-400" /> Pengaturan Hak Akses (Role Permissions)
                         </h3>
@@ -375,7 +374,7 @@ export const ThemeSettingsTab = () => {
 
                 {/* Kolom Kanan: Menu Sidebar */}
                 <div className="xl:col-span-5 flex flex-col h-full">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] h-full">
                         <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
                                 <Settings size={18} className="text-slate-400" /> Sidebar & Navigasi

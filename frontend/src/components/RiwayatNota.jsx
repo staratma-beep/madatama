@@ -66,64 +66,57 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
         <div className="flex flex-col h-[calc(100vh-130px)] max-w-7xl mx-auto gap-4">
             {/* STATIC TOP SECTION (Always visible) */}
             <div className="space-y-4">
-                {/* Header Banner */}
-                <div className="relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-md border border-indigo-400/30 w-full" style={{ background: "linear-gradient(135deg, rgba(79,70,229,0.95), rgba(109,40,217,0.95))" }}>
-                    <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
-                    <div className="absolute right-8 bottom-0 h-24 w-24 rounded-full bg-white/5" />
-                    <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h2 className="text-xl font-bold flex items-center gap-2 text-white drop-shadow-sm">
-                                <ReceiptText size={20} /> Riwayat Nota Penjualan
-                            </h2>
-                            <p className="text-xs text-indigo-100 mt-1 max-w-md line-clamp-2">
-                                Lihat daftar bukti transaksi yang tersimpan. Cetak kembali Nota, Invoice, atau Surat Jalan kapan pun dibutuhkan.
-                            </p>
-                        </div>
+                {/* Page Header */}
+                <div className="flex-none flex items-center justify-between pb-2 bg-transparent">
+                    <div>
+                        <h2 className="text-[20px] font-bold text-slate-800 flex items-center gap-2">
+                            <ReceiptText size={20} className="text-slate-700" /> Riwayat Nota Penjualan
+                        </h2>
+                    </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {sales.length > 0 && (
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setShowFilter(!showFilter)}
-                                    className={`gap-2 text-white border-0 backdrop-blur-md shadow-sm transition-all ${showFilter ? "bg-white/40 ring-2 ring-white/50" : "bg-white/20 hover:bg-white/30"}`}
-                                >
-                                    <FilterIcon size={15} /> Filter
-                                    {hasFilter && <span className="ml-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-white shadow-sm">!</span>}
-                                </Button>
-                            )}
-                            {sales.length > 0 && (
-                                <Button variant="secondary" className="gap-2 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm shadow-sm" onClick={() => { setReportMonth(saleMonths[0] || curMonth); setReportOpen(true); }}>
-                                    <FileText size={15} /> Rekap PDF
-                                </Button>
-                            )}
-                            {sales.length > 0 && (
-                                <Button onClick={() => exportSalesCSV(filteredSales)} className="gap-2 bg-white text-indigo-700 hover:bg-indigo-50 font-bold shadow-md">
-                                    <Download size={15} /> Export CSV
-                                </Button>
-                            )}
-                        </div>
+                    <div className="flex flex-wrap gap-2">
+                        {sales.length > 0 && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowFilter(!showFilter)}
+                                className={`gap-2 h-8 text-[13px] font-medium shadow-sm transition-all ${showFilter ? "bg-slate-100" : "bg-white"}`}
+                            >
+                                <FilterIcon size={14} /> Filter
+                                {hasFilter && <span className="ml-1 w-2 h-2 rounded-full bg-indigo-600 block"></span>}
+                            </Button>
+                        )}
+                        {sales.length > 0 && (
+                            <Button variant="outline" className="gap-2 h-8 bg-white text-[13px] font-medium shadow-sm" onClick={() => { setReportMonth(saleMonths[0] || curMonth); setReportOpen(true); }}>
+                                <FileText size={14} /> Rekap PDF
+                            </Button>
+                        )}
+                        {sales.length > 0 && (
+                            <Button onClick={() => exportSalesCSV(filteredSales)} className="gap-2 h-8 bg-white text-[13px] font-medium shadow-sm border border-slate-200 hover:bg-slate-50">
+                                <Download size={14} /> Export CSV
+                            </Button>
+                        )}
                     </div>
                 </div>
 
                 {/* Filter Panel */}
                 {showFilter && (
-                    <div className="grid grid-cols-1 gap-4 rounded-xl border border-indigo-100 bg-white/80 p-4 sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-top-2 shadow-sm backdrop-blur-md">
+                    <div className="grid grid-cols-1 gap-4 rounded-lg bg-white border border-slate-200 p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] sm:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-top-2">
                         <div className="lg:col-span-2">
-                            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Pencarian</Label>
-                            <Input type="text" placeholder="Cari nota, produk, atau nama pembeli..." value={f.search} onChange={(e) => setF({ ...f, search: e.target.value })} className="bg-white border-indigo-200 focus-visible:ring-indigo-500" />
+                            <Label className="text-[12px] font-medium text-slate-600 mb-1.5 block">Pencarian</Label>
+                            <Input type="text" placeholder="Cari nota, produk, atau nama pembeli..." value={f.search} onChange={(e) => setF({ ...f, search: e.target.value })} className="bg-white border-slate-200 text-[13px] h-9" />
                         </div>
                         <div>
-                            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Dari Tanggal</Label>
-                            <Input type="date" value={f.dari} onChange={(e) => setF({ ...f, dari: e.target.value })} className="bg-white border-indigo-200 focus-visible:ring-indigo-500" />
+                            <Label className="text-[12px] font-medium text-slate-600 mb-1.5 block">Dari Tanggal</Label>
+                            <Input type="date" value={f.dari} onChange={(e) => setF({ ...f, dari: e.target.value })} className="bg-white border-slate-200 text-[13px] h-9" />
                         </div>
                         <div>
-                            <Label className="text-xs font-semibold text-slate-600 mb-1.5 block">Sampai Tanggal</Label>
-                            <Input type="date" value={f.sampai} onChange={(e) => setF({ ...f, sampai: e.target.value })} className="bg-white border-indigo-200 focus-visible:ring-indigo-500" />
+                            <Label className="text-[12px] font-medium text-slate-600 mb-1.5 block">Sampai Tanggal</Label>
+                            <Input type="date" value={f.sampai} onChange={(e) => setF({ ...f, sampai: e.target.value })} className="bg-white border-slate-200 text-[13px] h-9" />
                         </div>
                         {hasFilter && (
                             <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-                                <Button variant="ghost" className="h-8 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-100" onClick={clearFilter}>
-                                    <X size={14} className="mr-1.5" /> Hapus semua filter
+                                <Button variant="ghost" className="h-8 text-[12px] font-medium text-slate-500 hover:text-slate-800" onClick={clearFilter}>
+                                    <X size={14} className="mr-1.5" /> Bersihkan Filter
                                 </Button>
                             </div>
                         )}
@@ -132,74 +125,70 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
             </div>
 
             {/* SCROLLABLE TABLE SECTION */}
-            <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col min-h-0">
+            <div className="flex-1 rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.1)] bg-white overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto">
-                    <table className="w-full text-left text-sm relative">
-                        <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200 text-slate-500 text-[11px] font-extrabold uppercase tracking-widest">
+                    <table className="w-full text-left text-[13px] border-collapse relative">
+                        <thead className="sticky top-0 z-20 bg-[#f7f7f7] border-b border-slate-200 text-slate-600 font-medium shadow-none">
                             <tr>
-                                <th className="px-5 py-4">Tanggal & No. Nota</th>
-                                <th className="px-5 py-4">Produk & Detail Pembeli</th>
-                                <th className="px-5 py-4 text-right w-40">Tagihan</th>
-                                <th className="px-5 py-4 text-center">Cetak & Aksi</th>
+                                <th className="px-5 py-2.5 min-w-[150px] border-r border-slate-100/50">Tanggal & No. Nota</th>
+                                <th className="px-5 py-2.5 w-full border-r border-slate-100/50">Produk & Detail Pembeli</th>
+                                <th className="px-5 py-2.5 text-right w-[150px] border-r border-slate-100/50">Tagihan</th>
+                                <th className="px-5 py-2.5 text-center min-w-[200px]">Cetak & Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-sm">
+                        <tbody className="divide-y divide-slate-100 text-[13px]">
                             {filteredSales.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-5 py-24 text-center">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="grid h-16 w-16 place-items-center rounded-full bg-slate-50 border border-slate-100 text-slate-300">
-                                                {hasFilter ? <FilterIcon size={24} /> : <ReceiptText size={24} />}
-                                            </div>
-                                            <p className="text-slate-500 font-semibold text-base">{hasFilter ? "Tidak ada nota yang cocok" : "Belum ada nota yang tersimpan."}</p>
-                                            <p className="text-sm text-slate-400">{hasFilter ? "Coba ubah kata kunci pencarian Anda." : "Transaksi yang selesai (dijual) akan muncul di sini."}</p>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <p className="text-slate-400 font-medium text-[13px]">{hasFilter ? "Tidak ada nota yang cocok" : "Belum ada nota yang tersimpan."}</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
                                 filteredSales.map((s) => (
-                                    <tr key={s.id} className="group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 bg-white">
-                                        <td className="px-5 py-4 align-top w-48">
-                                            <p className="font-semibold text-slate-800">{formatTanggal(s.tanggal)}</p>
-                                            <span className="inline-block mt-1.5 font-mono font-bold text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded tracking-wider">{s.nota_no}</span>
+                                    <tr key={s.id} className="group hover:bg-[#f9fafb] transition-all bg-white">
+                                        <td className="px-5 py-3 align-top min-w-[150px]">
+                                            <p className="font-medium text-slate-800">{formatTanggal(s.tanggal)}</p>
+                                            <span className="block mt-0.5 text-[11px] text-slate-500 font-mono tracking-wide">{s.nota_no}</span>
                                         </td>
-                                        <td className="px-5 py-4 align-top min-w-[250px]">
-                                            <div className="flex flex-col gap-1.5">
-                                                <p className="text-slate-800 font-bold text-base leading-tight">
-                                                    {s.nama} <span className="font-medium text-slate-500 text-sm ml-1">× {s.qty} {s.qty > 1 ? 'pcs' : 'pc'}</span>
+                                        <td className="px-5 py-3 align-top">
+                                            <div className="flex flex-col gap-1 inline-flex">
+                                                <p className="text-slate-800 font-semibold leading-tight">
+                                                    {s.nama} <span className="font-normal text-slate-500 text-[12px] ml-1">× {s.qty} {s.qty > 1 ? 'pcs' : 'pc'}</span>
                                                 </p>
-                                                <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                                     {s.pembeli && (
-                                                        <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-200 px-1.5 py-0.5 rounded text-slate-600">Pembeli</span> {s.pembeli}
+                                                        <span className="text-[12px] text-slate-500 flex items-center gap-1">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">PBL</span> {s.pembeli}
                                                         </span>
                                                     )}
                                                     {s.is_dp && (
-                                                        <span className="text-[10px] uppercase tracking-wider font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full inline-flex items-center">
-                                                            KREDIT / DP (Sisa {formatRupiah(s.total - s.dp_amount)})
+                                                        <span className="text-[10px] font-semibold text-[#b35e20] bg-[#fbf1ed] border border-[#f5e1d2] px-1.5 py-0.5 rounded ml-1 uppercase">
+                                                            Sisa {formatRupiah(s.total - s.dp_amount)}
                                                         </span>
                                                     )}
                                                 </div>
-                                                {s.diskon > 0 && <p className="text-xs text-rose-500 font-medium font-mono-num">- Diskon: {formatRupiah(s.diskon)}</p>}
+                                                {s.diskon > 0 && <p className="text-[12px] text-[#ef4444] font-mono-num">- Diskon: {formatRupiah(s.diskon)}</p>}
                                             </div>
                                         </td>
-                                        <td className="px-5 py-4 align-top text-right">
-                                            <p className="font-mono-num text-lg font-bold text-emerald-600 bg-emerald-50 inline-block px-2 py-1 rounded-md mb-1">{formatRupiah(s.total)}</p>
-                                            {(s.laba > 0) && <p className="text-[10px] text-indigo-500 font-bold font-mono-num tracking-wide mt-1 uppercase">Laba: {formatRupiah(s.laba)}</p>}
+                                        <td className="px-5 py-3 align-top text-right w-[150px]">
+                                            <p className="font-mono-num text-[14px] font-semibold text-slate-800">{formatRupiah(s.total)}</p>
+                                            {(s.laba > 0) && <p className="text-[11px] text-slate-400 font-mono-num mt-0.5">Laba: {formatRupiah(s.laba)}</p>}
                                         </td>
-                                        <td className="px-6 py-4 align-top text-center">
-                                            <div className="flex flex-wrap items-center justify-center gap-1.5">
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-500 hover:text-slate-700 font-bold transition-all shadow-sm" onClick={() => downloadNota(s, profile)} title="Download Thermal 58mm">
-                                                    <FileText size={14} /> Nota
+                                        <td className="px-5 py-3 align-top text-center min-w-[200px]">
+                                            <div className="flex flex-wrap items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white text-slate-600 hover:bg-slate-50 shadow-sm" onClick={() => downloadNota(s, profile)} title="Download Thermal 58mm">
+                                                    Nota
                                                 </Button>
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-white border border-slate-200 hover:bg-indigo-100 hover:border-indigo-300 text-indigo-500 hover:text-indigo-700 font-bold transition-all shadow-sm" onClick={() => downloadInvoice(s, profile)} title="Download Invoice A4/PDF">
-                                                    <FileSpreadsheet size={14} /> Invoice
+                                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white text-slate-600 hover:bg-slate-50 shadow-sm" onClick={() => downloadInvoice(s, profile)} title="Download Invoice A4/PDF">
+                                                    Invoice
                                                 </Button>
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-500 hover:text-slate-700 font-bold transition-all shadow-sm" onClick={() => downloadSuratJalan(s, profile)} title="Download Surat Jalan Delivery">
-                                                    <Truck size={14} /> Jalan
+                                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] bg-white text-slate-600 hover:bg-slate-50 shadow-sm" onClick={() => downloadSuratJalan(s, profile)} title="Download Surat Jalan Delivery">
+                                                    Surat Jalan
                                                 </Button>
-                                                <button onClick={() => setNotaDel(s)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent hover:border-rose-300 hover:bg-rose-500 text-slate-400 hover:text-white transition-all shadow-sm ml-1" title="Hapus">
-                                                    <Trash2 size={15} />
+                                                <button onClick={() => setNotaDel(s)} className="grid h-7 w-7 shrink-0 place-items-center rounded border border-slate-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all shadow-sm ml-1" title="Hapus">
+                                                    <Trash2 size={13} />
                                                 </button>
                                             </div>
                                         </td>

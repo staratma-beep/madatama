@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
-import { Plus, CheckCircle2, RotateCcw, Trash2, PlusSquare } from "lucide-react";
+import { Plus, CheckCircle2, RotateCcw, Trash2, HandCoins } from "lucide-react";
 
 const emptyForm = { tanggal: todayISO(), jenis: "Piutang", nama: "", keterangan: "", nominalStr: "", status: "Belum Lunas" };
 
@@ -44,28 +44,33 @@ const List = ({ title, items, accent, onSettle, onUnsettle, onDelete, onDeleteMu
   const isAllSelected = items.length > 0 && selectedIds.length === items.length;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col h-full relative">
-      <div className={`flex items-center justify-between px-5 py-4 ${accent.header}`}>
+    <div className="rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.1)] bg-white overflow-hidden flex flex-col h-full relative">
+      <div className={`flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white`}>
         <div>
-          <p className="font-heading text-lg font-bold text-white shadow-sm">{title}</p>
-          <p className="text-xs text-white/90">{totalLabel}</p>
+          <p className="font-semibold text-[14px] text-slate-800">{title}</p>
+          <p className="text-[12px] text-slate-500">{totalLabel}</p>
         </div>
-        <p className="font-mono-num text-xl font-bold text-white shadow-sm" data-testid={accent.totalTestId}>{formatRupiah(total)}</p>
+        <p className="font-mono-num text-[16px] font-bold text-slate-800" data-testid={accent.totalTestId}>{formatRupiah(total)}</p>
       </div>
 
       <div className="overflow-auto flex-1 pb-16">
-        <table className="w-full text-left text-sm relative">
-          <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur shadow-sm border-b border-slate-200 text-slate-500 text-[11px] font-extrabold uppercase tracking-widest">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+          <thead className="sticky top-0 z-20 bg-[#f7f7f7] border-b border-slate-200 text-slate-600 text-[13px] font-medium shadow-none">
             <tr>
-              <th className="px-5 py-4 w-10 text-center">
-                <Checkbox checked={isAllSelected} onCheckedChange={selectAll} className="rounded-full data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600" />
+              <th className="px-4 py-2.5 w-10 text-center border-r border-slate-100/50">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={(e) => selectAll(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                />
               </th>
-              <th className="px-4 py-4">Nama / Keterangan</th>
-              <th className="px-4 py-4 text-right w-[110px]">Nominal</th>
-              <th className="px-5 py-4 text-center w-24">Aksi</th>
+              <th className="px-4 py-2.5 border-r border-slate-100/50">Nama / Keterangan</th>
+              <th className="px-4 py-2.5 text-right w-[120px] border-r border-slate-100/50">Nominal</th>
+              <th className="px-4 py-2.5 text-center w-24">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm">
+          <tbody className="divide-y divide-slate-100 text-[13px]">
             {items.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-14 text-center">
@@ -78,31 +83,38 @@ const List = ({ title, items, accent, onSettle, onUnsettle, onDelete, onDeleteMu
             {items.map((r) => {
               const isSelected = selectedIds.includes(r.id);
               return (
-                <tr key={r.id} className={`group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 ${isSelected ? 'bg-indigo-50/40 shadow-[inset_4px_0_0_0_rgba(99,102,241,1)]' : 'bg-white'}`} data-testid={`record-row-${r.id}`}>
-                  <td className="px-5 py-3.5 align-middle text-center w-12">
-                    <Checkbox checked={isSelected} onCheckedChange={(c) => toggleSelect(r.id, c)} className="rounded-full data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600" />
+                <tr key={r.id} className={`group hover:bg-[#f9fafb] transition-all duration-150 ${isSelected ? 'bg-[#f4f5f7]' : 'bg-white'}`} data-testid={`record-row-${r.id}`}>
+                  <td className="px-4 py-3 align-middle text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => toggleSelect(r.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                    />
                   </td>
-                  <td className="px-4 py-3.5 w-full">
-                    <p className="font-bold text-slate-800 line-clamp-1 leading-snug">{r.nama}</p>
-                    <p className="text-xs font-medium text-slate-400 line-clamp-1 mt-0.5">{formatTanggal(r.tanggal)} {r.keterangan && `· ${r.keterangan}`}</p>
+                  <td className="px-4 py-3 max-w-[120px] lg:max-w-[180px]">
+                    <p className="font-semibold text-slate-800 truncate leading-snug" title={r.nama}>{r.nama}</p>
+                    <p className="text-[12px] font-medium text-slate-500 truncate mt-0.5" title={r.keterangan ? `${formatTanggal(r.tanggal)} · ${r.keterangan}` : formatTanggal(r.tanggal)}>
+                      {formatTanggal(r.tanggal)} {r.keterangan && `· ${r.keterangan}`}
+                    </p>
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <p className={`font-mono-num font-bold text-sm ${accent.text}`}>{formatRupiah(r.nominal)}</p>
-                    <span className={`inline-flex rounded-md px-2 py-0.5 mt-1 text-[10px] uppercase font-bold tracking-wider ${r.status === "Lunas" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>{r.status}</span>
+                  <td className="px-4 py-3 text-right">
+                    <p className={`font-mono-num font-semibold text-[13px] ${accent.text}`}>{formatRupiah(r.nominal)}</p>
+                    <span className={`inline-flex rounded-md px-2 py-0.5 mt-1 text-[11px] font-medium tracking-wide ${r.status === "Lunas" ? "bg-[#bbf7d0] text-[#14532d]" : "bg-[#fef08a] text-[#713f12]"}`}>{r.status}</span>
                   </td>
-                  <td className="px-6 py-3.5 text-center w-32">
-                    <div className="flex items-center justify-end gap-1 text-slate-400">
+                  <td className="px-4 py-3 text-center w-24">
+                    <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       {r.status === "Belum Lunas" ? (
-                        <button onClick={() => onSettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-emerald-100 text-slate-400 hover:text-emerald-600 transition-colors" title="Tandai Lunas">
-                          <CheckCircle2 size={15} />
+                        <button onClick={() => onSettle(r.id)} className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 transition-all shadow-sm" title="Tandai Lunas">
+                          <CheckCircle2 size={13} />
                         </button>
                       ) : (
-                        <button onClick={() => onUnsettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors" title="Batal Lunas">
-                          <RotateCcw size={15} />
+                        <button onClick={() => onUnsettle(r.id)} className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-all shadow-sm" title="Batal Lunas">
+                          <RotateCcw size={13} />
                         </button>
                       )}
-                      <button onClick={() => onDelete(r)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors" title="Hapus">
-                        <Trash2 size={15} />
+                      <button onClick={() => onDelete(r)} className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-all shadow-sm" title="Hapus">
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -157,89 +169,84 @@ export const PiutangUtang = ({ records, onCreate, onSettle, onUnsettle, onDelete
 
   return (
     <div className="flex flex-col h-[calc(100vh-130px)] max-w-7xl mx-auto space-y-4">
-      {/* Banner Section */}
-      <div className="flex-none relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-6 text-white shadow-lg">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
-        <div className="absolute -bottom-10 right-20 h-32 w-32 rounded-full bg-indigo-900/20 blur-xl"></div>
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <PlusSquare className="text-indigo-100" /> Piutang & Utang
-            </h2>
-            <p className="mt-1 text-sm text-indigo-100 max-w-lg opacity-90">Kelola tagihan customer & kewajiban ke mitra untuk kelancaran arus kas.</p>
-          </div>
-          <div>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-md px-4 py-2.5 rounded-lg border-0 h-auto" data-testid="add-record-btn">
-                  <Plus size={16} className="mr-1.5" /> Tambah Catatan
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md text-slate-900" data-testid="record-dialog">
-                <DialogHeader><DialogTitle className="font-heading text-xl">Tambah Catatan</DialogTitle></DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Tanggal</Label>
-                      <Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} data-testid="record-tanggal" />
-                    </div>
-                    <div>
-                      <Label>Jenis</Label>
-                      <Select value={form.jenis} onValueChange={(v) => setForm({ ...form, jenis: v })}>
-                        <SelectTrigger data-testid="record-jenis"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Piutang">Piutang (customer berhutang)</SelectItem>
-                          <SelectItem value="Utang">Utang (kita berhutang)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+      {/* Page Header */}
+      <div className="flex-none flex items-center justify-between pb-2 bg-transparent">
+        <div>
+          <h2 className="text-[20px] font-bold text-slate-800 flex items-center gap-2">
+            <HandCoins size={20} className="text-slate-700" /> Catatan Piutang & Utang
+          </h2>
+        </div>
+        <div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#1a1a1a] text-white hover:bg-black font-medium shadow-sm px-4 py-2 rounded-lg border-0 h-auto transition-colors" data-testid="add-record-btn">
+                Tambah Catatan
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md text-slate-900" data-testid="record-dialog">
+              <DialogHeader><DialogTitle className="font-heading text-xl">Tambah Catatan</DialogTitle></DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Tanggal</Label>
+                    <Input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} data-testid="record-tanggal" />
                   </div>
                   <div>
-                    <Label>Nama (Customer / Mitra)</Label>
-                    <Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} data-testid="record-nama" />
-                  </div>
-                  <div>
-                    <Label>Keterangan</Label>
-                    <Input value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} data-testid="record-keterangan" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Nominal (Rp)</Label>
-                      <Input inputMode="numeric" value={form.nominalStr} placeholder="0"
-                        onChange={(e) => setForm({ ...form, nominalStr: formatNumberInput(e.target.value) })} data-testid="record-nominal" />
-                    </div>
-                    <div>
-                      <Label>Status</Label>
-                      <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                        <SelectTrigger data-testid="record-status"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Belum Lunas">Belum Lunas</SelectItem>
-                          <SelectItem value="Lunas">Lunas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Label>Jenis</Label>
+                    <Select value={form.jenis} onValueChange={(v) => setForm({ ...form, jenis: v })}>
+                      <SelectTrigger data-testid="record-jenis"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Piutang">Piutang (customer berhutang)</SelectItem>
+                        <SelectItem value="Utang">Utang (kita berhutang)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpen(false)}>Batal</Button>
-                  <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={submit} data-testid="save-record-btn">Simpan</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+                <div>
+                  <Label>Nama (Customer / Mitra)</Label>
+                  <Input value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} data-testid="record-nama" />
+                </div>
+                <div>
+                  <Label>Keterangan</Label>
+                  <Input value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} data-testid="record-keterangan" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nominal (Rp)</Label>
+                    <Input inputMode="numeric" value={form.nominalStr} placeholder="0"
+                      onChange={(e) => setForm({ ...form, nominalStr: formatNumberInput(e.target.value) })} data-testid="record-nominal" />
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                      <SelectTrigger data-testid="record-status"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Belum Lunas">Belum Lunas</SelectItem>
+                        <SelectItem value="Lunas">Lunas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpen(false)}>Batal</Button>
+                <Button className="bg-[#1a1a1a] text-white hover:bg-black" onClick={submit} data-testid="save-record-btn">Simpan</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <List
-          title="Piutang" items={piutang} totalLabel="Belum lunas (uang masuk)" total={totalPiutang}
-          accent={{ header: "bg-gradient-to-r from-teal-500 to-teal-700", text: "text-teal-600", totalTestId: "total-piutang" }}
+          title="Catatan Piutang" items={piutang} totalLabel="Uang yang akan masuk" total={totalPiutang}
+          accent={{ text: "text-slate-800", totalTestId: "total-piutang" }}
           onSettle={onSettle} onUnsettle={onUnsettle} onDelete={setToDelete}
           onDeleteMultiple={setToDeleteBulk} onSettleMultiple={onSettle}
         />
         <List
-          title="Utang" items={utang} totalLabel="Belum lunas (uang keluar)" total={totalUtang}
-          accent={{ header: "bg-gradient-to-r from-amber-500 to-amber-700", text: "text-amber-600", totalTestId: "total-utang" }}
+          title="Catatan Utang" items={utang} totalLabel="Uang yang harus keluar" total={totalUtang}
+          accent={{ text: "text-slate-800", totalTestId: "total-utang" }}
           onSettle={onSettle} onUnsettle={onUnsettle} onDelete={setToDelete}
           onDeleteMultiple={setToDeleteBulk} onSettleMultiple={onSettle}
         />
@@ -274,6 +281,6 @@ export const PiutangUtang = ({ records, onCreate, onSettle, onUnsettle, onDelete
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };

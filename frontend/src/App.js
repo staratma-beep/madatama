@@ -11,7 +11,7 @@ import { PiutangUtang } from "@/components/PiutangUtang";
 import { HPPKalkulator } from "@/components/HPPKalkulator";
 import { TransactionDialog } from "@/components/TransactionDialog";
 import { Toolbar } from "@/components/Toolbar";
-import { FixedCostsBar } from "@/components/FixedCostsBar";
+
 import { Produksi } from "@/components/Produksi";
 import { LogAktivitas } from "@/components/LogAktivitas";
 import { Login } from "@/components/Login";
@@ -268,23 +268,23 @@ function App() {
                   href={`http://${window.location.hostname}:5173`}
                   target="_blank"
                   rel="noreferrer"
-                  className="hidden sm:flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 transition-colors"
+                  className="hidden sm:flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors"
                   title="Buka Toko Online (Frontend Publik)"
                 >
-                  <Globe size={12} />
+                  <Globe size={13} className="text-slate-400" />
                   Buka Web
                 </a>
                 <WebOrders onAccepted={reload} onNavigate={() => setTab("pesanan-web")} />
                 <div className="text-right hidden md:block">
                   <p className="text-sm font-bold text-slate-700 leading-tight">{authUser?.name}</p>
-                  <p className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">{authUser?.role}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{authUser?.role}</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="grid h-9 w-9 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 place-items-center rounded-xl transition-colors"
+                  className="grid h-8 w-8 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-red-500 place-items-center rounded-md transition-colors shadow-sm"
                   title="Keluar (Logout)"
                 >
-                  <LogOut size={16} />
+                  <LogOut size={14} />
                 </button>
               </div>
             </div>
@@ -294,11 +294,6 @@ function App() {
         <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
 
           {/* ===== DASHBOARD SECTION MOVED INSIDE TABS ===== */}
-
-          {/* ===== FIXED COSTS BAR ===== */}
-          {tab === "kas" && (
-            <FixedCostsBar fixedCosts={fixedCosts} onReload={reload} />
-          )}
 
           {/* ===== MAIN CONTENT TABS ===== */}
           <div className="w-full">
@@ -315,7 +310,7 @@ function App() {
               {tab === "kas" && (
                 <BukuKas
                   transactions={transactions} saldoAwal={saldoAwal} cashBalance={cashBalance} profile={settings} sales={sales}
-                  onAdd={handleAdd} onEdit={handleEdit} onDelete={handleDelete}
+                  onAdd={handleAdd} onEdit={handleEdit} onDelete={handleDelete} fixedCosts={fixedCosts} onReload={reload}
                 />
               )}
               {tab === "hpp" && <HPPKalkulator onSold={reload} cashBalance={cashBalance} role={authUser?.role} />}

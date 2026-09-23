@@ -38,19 +38,19 @@ export const WebOrders = ({ onNavigate }) => {
         <DropdownMenu open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (open) refreshOrders() }}>
             <DropdownMenuTrigger asChild>
                 <button
-                    className="relative grid h-9 w-9 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-indigo-600 place-items-center rounded-xl transition-all shadow-sm outline-none"
+                    className="relative grid h-8 w-8 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 place-items-center rounded-md transition-all shadow-sm outline-none"
                     title="Ada pesanan online & konfirmasi pembayaran baru"
                 >
-                    <Bell size={18} className={notificationCount > 0 ? "animate-pulse text-amber-500" : ""} />
+                    <Bell size={15} className={notificationCount > 0 ? "animate-pulse text-amber-500" : ""} />
                     {notificationCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                             {notificationCount < 10 ? notificationCount : '9+'}
                         </span>
                     )}
                 </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 max-h-[80vh] overflow-hidden flex flex-col bg-white border border-slate-100 shadow-xl rounded-2xl animate-in zoom-in-95">
+            <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 max-h-[80vh] overflow-hidden flex flex-col bg-white border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] rounded-lg animate-in zoom-in-95">
                 <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-bold text-sm text-slate-700">Notifikasi Baru Diterima</h3>
                 </div>

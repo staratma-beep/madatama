@@ -239,58 +239,59 @@ export const WebOrdersTab = ({ onAccepted }) => {
     return (
         <div className="flex flex-col max-w-7xl mx-auto space-y-4 pb-12">
             {/* Banner Section */}
-            <div className="flex-none relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 p-6 text-white shadow-lg">
-                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
-                <div className="absolute -bottom-10 right-20 h-32 w-32 rounded-full bg-indigo-900/20 blur-xl"></div>
-                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold flex items-center gap-2">
-                            <ShoppingCart className="text-indigo-100" /> Pesanan Toko Online
-                        </h2>
-                        <p className="mt-1 text-sm text-indigo-100 max-w-lg opacity-90">Kelola pesanan baru, setujui pembayaran, dan pantau riwayat pesanan dari web publik.</p>
+            <div className="flex-none flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 bg-transparent">
+                <div>
+                    <h2 className="text-[20px] font-bold flex items-center gap-2 text-slate-800">
+                        <ShoppingCart size={20} className="text-slate-700" /> Pesanan Toko Online
+                    </h2>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search size={14} className="text-slate-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Cari Nama / ID Pesanan..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 pr-4 h-8 bg-white border border-slate-200 text-slate-700 placeholder:text-slate-400 rounded outline-none transition-all w-64 shadow-sm text-[13px] focus:ring-1 focus:ring-indigo-500"
+                        />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search size={16} className="text-white/60" />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Cari Nama / ID Pesanan..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-4 py-2.5 bg-white/10 hover:bg-white/20 focus:bg-white/30 border border-white/20 text-white placeholder:text-white/60 rounded-lg text-sm outline-none transition-all w-64 shadow-sm"
-                            />
-                        </div>
-                        <div className="bg-white/10 text-white font-medium px-4 py-2.5 rounded-lg border border-white/20 text-sm flex items-center gap-2 cursor-default" title="Otomatis memuat data pesanan terbaru setiap 5 detik">
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            Live Update
-                        </div>
+                    <div className="bg-white text-slate-600 font-medium px-3 h-8 rounded border border-slate-200 text-[12px] flex items-center justify-center gap-2 shadow-sm cursor-default" title="Otomatis memuat data pesanan terbaru setiap 5 detik">
+                        <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        Live
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.1)] bg-white overflow-hidden flex flex-col">
 
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3 mt-2 mb-4">
-                    <div className="flex gap-2 font-sans">
-                        <button onClick={() => { setActiveTab('baru'); setSelectedIds([]); }} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'baru' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>Pesanan Baru {pendingOrders.length > 0 && <span className="ml-1 bg-red-500 text-white rounded-full px-2 text-[10px] py-0.5">{pendingOrders.length}</span>}</button>
-                        <button onClick={() => { setActiveTab('bayar'); setSelectedIds([]); }} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'bayar' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>Cek Pembayaran {pendingPayments.length > 0 && <span className="ml-1 bg-amber-500 text-white rounded-full px-2 text-[10px] py-0.5">{pendingPayments.length}</span>}</button>
-                        <button onClick={() => { setActiveTab('riwayat'); setSelectedIds([]); }} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'riwayat' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>Riwayat Selesai</button>
+                <div className="flex justify-between items-center p-2 border-b border-slate-200 bg-white relative z-10 w-full overflow-x-auto">
+                    <div className="flex gap-1 font-sans">
+                        <button onClick={() => { setActiveTab('baru'); setSelectedIds([]); }} className={`px-3 py-1.5 text-[13px] font-semibold rounded-md shadow-sm transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'baru' ? 'bg-[#f1f2f4] text-slate-800' : 'text-slate-500 hover:bg-slate-50 border border-transparent shadow-none'}`}>
+                            Pesanan Baru {pendingOrders.length > 0 && <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[10px] sm:ml-1">{pendingOrders.length}</span>}
+                        </button>
+                        <button onClick={() => { setActiveTab('bayar'); setSelectedIds([]); }} className={`px-3 py-1.5 text-[13px] font-semibold rounded-md shadow-sm transition-colors whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'bayar' ? 'bg-[#f1f2f4] text-slate-800' : 'text-slate-500 hover:bg-slate-50 border border-transparent shadow-none'}`}>
+                            Cek Pembayaran {pendingPayments.length > 0 && <span className="bg-amber-500 text-white rounded-full px-1.5 py-0.5 text-[10px] sm:ml-1">{pendingPayments.length}</span>}
+                        </button>
+                        <button onClick={() => { setActiveTab('riwayat'); setSelectedIds([]); }} className={`px-3 py-1.5 text-[13px] font-semibold rounded-md shadow-sm transition-colors whitespace-nowrap ${activeTab === 'riwayat' ? 'bg-[#f1f2f4] text-slate-800' : 'text-slate-500 hover:bg-slate-50 border border-transparent shadow-none'}`}>
+                            Riwayat Selesai
+                        </button>
                     </div>
 
                     {selectedIds.length > 0 && (
-                        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm animate-in fade-in slide-in-from-right-5">
-                            <span className="text-sm font-bold text-slate-700 mr-2">{selectedIds.length} Dipilih</span>
+                        <div className="flex items-center gap-2 pr-1 ml-4 shrink-0">
+                            <span className="text-sm font-bold text-slate-700 mr-2 whitespace-nowrap">{selectedIds.length} Dipilih</span>
                             {activeTab === 'baru' && (
-                                <button onClick={handleBulkAccept} className="bg-emerald-100 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 text-emerald-700 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap">
+                                <button onClick={handleBulkAccept} className="bg-[#f1f2f4] hover:bg-indigo-600 hover:text-white border border-transparent text-slate-700 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap">
                                     <CheckSquare size={14} /> Acc Sekaligus
                                 </button>
                             )}
-                            <button onClick={handleBulkDelete} className="bg-rose-100 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-700 hover:text-white flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap">
+                            <button onClick={handleBulkDelete} className="bg-[#f1f2f4] hover:bg-rose-600 hover:text-white border border-transparent text-slate-700 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors whitespace-nowrap">
                                 <Trash2 size={14} /> Hapus Sekaligus
                             </button>
                         </div>
@@ -298,154 +299,156 @@ export const WebOrdersTab = ({ onAccepted }) => {
                 </div>
 
                 {filteredAndSearchedOrders.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-500 py-20 bg-slate-50/50 rounded-2xl border border-slate-100/50 mt-2">
-                        <div className="bg-white p-6 rounded-full shadow-sm mb-4">
-                            <Search className="text-indigo-200" size={48} />
+                    <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-500 py-16 bg-white min-h-[300px]">
+                        <div className="bg-slate-50 p-6 rounded-full shadow-sm mb-4">
+                            <Search className="text-slate-300" size={40} />
                         </div>
-                        <p className="font-semibold text-slate-600 text-lg mb-1">
+                        <p className="font-semibold text-slate-600 text-base mb-1">
                             {searchQuery ? 'Pencarian tidak ditemukan' : 'Tidak ada pesanan'}
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-[13px] text-slate-400">
                             {searchQuery ? `Tidak ada pesanan yang cocok dengan "${searchQuery}"` : 'Belum ada data pesanan pada kategori ini saat ini.'}
                         </p>
                     </div>
                 ) : (
-                    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
-                        <table className="w-full text-left border-collapse whitespace-nowrap relative">
-                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-extrabold uppercase tracking-widest shadow-sm">
-                                <tr>
-                                    <th className="px-5 py-4 w-12 text-center">
-                                        <input
-                                            type="checkbox"
-                                            className="circular-checkbox"
-                                            checked={filteredAndSearchedOrders.length > 0 && selectedIds.length === filteredAndSearchedOrders.length}
-                                            onChange={(e) => e.target.checked ? setSelectedIds(filteredAndSearchedOrders.map(o => o.id)) : setSelectedIds([])}
-                                        />
-                                    </th>
-                                    <th className="px-2 py-4">Tanggal & ID Pesanan</th>
-                                    <th className="px-4 py-4 w-48">Pembeli</th>
-                                    <th className="px-4 py-4 min-w-[260px]">Item Pesanan</th>
-                                    <th className="px-6 py-4 text-center w-40">Status</th>
-                                    <th className="px-6 py-4 text-center w-48">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
-                                {filteredAndSearchedOrders.map(o => {
-                                    const items = o.items || [o];
-                                    const isSelected = selectedIds.includes(o.id);
+                    <div className="w-full">
+                        <div className="overflow-x-auto w-full">
+                            <table className="w-full text-left border-collapse whitespace-nowrap relative">
+                                <thead className="bg-[#f7f7f7] border-b border-slate-200 text-slate-600 text-[13px] font-medium shadow-none">
+                                    <tr>
+                                        <th className="px-4 py-2.5 w-12 text-center border-r border-slate-100/50">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                                                checked={filteredAndSearchedOrders.length > 0 && selectedIds.length === filteredAndSearchedOrders.length}
+                                                onChange={(e) => e.target.checked ? setSelectedIds(filteredAndSearchedOrders.map(o => o.id)) : setSelectedIds([])}
+                                            />
+                                        </th>
+                                        <th className="px-4 py-2.5 border-r border-slate-100/50">Tanggal & ID Pesanan</th>
+                                        <th className="px-4 py-2.5 w-48 border-r border-slate-100/50">Pembeli</th>
+                                        <th className="px-4 py-2.5 min-w-[260px] border-r border-slate-100/50">Item Pesanan</th>
+                                        <th className="px-4 py-2.5 text-center w-40 border-r border-slate-100/50">Status</th>
+                                        <th className="px-4 py-2.5 text-center w-48 border-r border-slate-100/50">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-[13px]">
+                                    {filteredAndSearchedOrders.map(o => {
+                                        const items = o.items || [o];
+                                        const isSelected = selectedIds.includes(o.id);
 
-                                    return (
-                                        <tr key={o.id} className={`group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 ${isSelected ? 'bg-indigo-50/40 shadow-[inset_4px_0_0_0_rgba(99,102,241,1)]' : 'bg-white'}`}>
-                                            <td className="px-5 py-3.5 align-middle text-center w-12">
-                                                <input
-                                                    type="checkbox"
-                                                    className="circular-checkbox"
-                                                    checked={isSelected}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) setSelectedIds([...selectedIds, o.id]);
-                                                        else setSelectedIds(selectedIds.filter(id => id !== o.id));
-                                                    }}
-                                                />
-                                            </td>
-                                            <td className="px-2 py-3.5 align-middle w-56">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-bold text-slate-800 whitespace-nowrap">{new Date(o.created_at).toLocaleString("id-ID", { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                                                    <span className="inline-block w-fit font-mono font-bold text-[11px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded tracking-wider shadow-sm">{o.id}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3.5 align-middle w-48">
-                                                <div className="flex flex-col gap-0.5 max-w-[160px]">
-                                                    <span className="font-bold text-slate-800 text-[13px] truncate" title={o.nama}>{o.nama}</span>
-                                                    <span className="text-[11px] text-slate-400 font-mono">({o.kontak})</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3.5 align-middle min-w-[260px]">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    {items.map((it, idx) => (
-                                                        <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 py-1 px-2.5 rounded-lg shadow-sm">
-                                                            {it.custom_image ? (
-                                                                <a href={it.custom_image} target="_blank" rel="noreferrer" className="w-6 h-6 border border-slate-200 rounded object-cover overflow-hidden hover:scale-110 transition-transform" title="Desain Kustom">
-                                                                    <img src={it.custom_image} className="w-full h-full object-cover" alt="Kustom" />
-                                                                </a>
-                                                            ) : <span className="text-[10px] grayscale opacity-60">📦</span>}
-                                                            <span className="text-xs font-bold text-slate-700 max-w-[140px] truncate">{it.product?.nama || "Produk"}</span>
-                                                            {it.catatan && (
-                                                                <span className="text-[10px] text-slate-500 italic max-w-[80px] truncate" title={it.catatan}>"{it.catatan}"</span>
+                                        return (
+                                            <tr key={o.id} className={`group hover:bg-[#f9fafb] transition-all duration-150 ${isSelected ? 'bg-[#f4f5f7]' : 'bg-white'}`}>
+                                                <td className="px-4 py-3 align-middle text-center w-12">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                                                        checked={isSelected}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedIds([...selectedIds, o.id]);
+                                                            else setSelectedIds(selectedIds.filter(id => id !== o.id));
+                                                        }}
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-3.5 align-middle w-56">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-bold text-slate-800 whitespace-nowrap">{new Date(o.created_at).toLocaleString("id-ID", { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                                        <span className="inline-block w-fit font-mono font-bold text-[11px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded tracking-wider shadow-sm">{o.id}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 align-middle w-48">
+                                                    <div className="flex flex-col gap-0.5 max-w-[160px]">
+                                                        <span className="font-bold text-slate-800 text-[13px] truncate" title={o.nama}>{o.nama}</span>
+                                                        <span className="text-[11px] text-slate-400 font-mono">({o.kontak})</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 align-middle min-w-[260px]">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {items.map((it, idx) => (
+                                                            <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 py-1 px-2.5 rounded-lg shadow-sm">
+                                                                {it.custom_image ? (
+                                                                    <a href={it.custom_image} target="_blank" rel="noreferrer" className="w-6 h-6 border border-slate-200 rounded object-cover overflow-hidden hover:scale-110 transition-transform" title="Desain Kustom">
+                                                                        <img src={it.custom_image} className="w-full h-full object-cover" alt="Kustom" />
+                                                                    </a>
+                                                                ) : <span className="text-[10px] grayscale opacity-60">📦</span>}
+                                                                <span className="text-xs font-bold text-slate-700 max-w-[140px] truncate">{it.product?.nama || "Produk"}</span>
+                                                                {it.catatan && (
+                                                                    <span className="text-[10px] text-slate-500 italic max-w-[80px] truncate" title={it.catatan}>"{it.catatan}"</span>
+                                                                )}
+                                                                <span className="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-[9px] shrink-0">x{it.qty}</span>
+
+                                                                {accepting?.id === o.id && (
+                                                                    <div className="flex items-center gap-1.5 ml-2 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
+                                                                        <Label className="text-[9px] font-bold text-indigo-700">Rp</Label>
+                                                                        <Input
+                                                                            className="h-5 w-20 text-[10px] px-1 font-mono-num font-bold text-indigo-900 bg-white"
+                                                                            value={hargaJuals[idx] || ""}
+                                                                            onChange={e => setHargaJuals({ ...hargaJuals, [idx]: formatNumberInput(e.target.value) })}
+                                                                            placeholder="Harga Jual"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3.5 align-middle text-center border-l-transparent">
+                                                    {activeTab === 'bayar' ? (
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            {o.payment_status === "Menunggu Konfirmasi Bayar" ? (
+                                                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 shadow-sm px-3 py-1 rounded-full border border-amber-200 uppercase tracking-wider">Bukti Terkirim</span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 shadow-sm px-3 py-1 rounded-full border border-slate-200 uppercase tracking-wider">Menunggu Bayar</span>
                                                             )}
-                                                            <span className="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded text-[9px] shrink-0">x{it.qty}</span>
-
-                                                            {accepting?.id === o.id && (
-                                                                <div className="flex items-center gap-1.5 ml-2 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
-                                                                    <Label className="text-[9px] font-bold text-indigo-700">Rp</Label>
-                                                                    <Input
-                                                                        className="h-5 w-20 text-[10px] px-1 font-mono-num font-bold text-indigo-900 bg-white"
-                                                                        value={hargaJuals[idx] || ""}
-                                                                        onChange={e => setHargaJuals({ ...hargaJuals, [idx]: formatNumberInput(e.target.value) })}
-                                                                        placeholder="Harga Jual"
-                                                                    />
-                                                                </div>
+                                                            {o.bukti_bayar && (
+                                                                <button onClick={() => setPreviewImage(o.bukti_bayar)} className="text-[10px] flex gap-1.5 items-center font-bold text-indigo-700 mt-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full transition-colors hover:bg-indigo-600 hover:text-white shadow-sm">
+                                                                    <ImageIcon size={12} /> Lihat Bukti
+                                                                </button>
                                                             )}
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-3.5 align-middle text-center border-l-transparent">
-                                                {activeTab === 'bayar' ? (
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        {o.payment_status === "Menunggu Konfirmasi Bayar" ? (
-                                                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 shadow-sm px-3 py-1 rounded-full border border-amber-200 uppercase tracking-wider">Bukti Terkirim</span>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-slate-600 bg-slate-100 shadow-sm px-3 py-1 rounded-full border border-slate-200 uppercase tracking-wider">Menunggu Bayar</span>
-                                                        )}
-                                                        {o.bukti_bayar && (
-                                                            <button onClick={() => setPreviewImage(o.bukti_bayar)} className="text-[10px] flex gap-1.5 items-center font-bold text-indigo-700 mt-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full transition-colors hover:bg-indigo-600 hover:text-white shadow-sm">
-                                                                <ImageIcon size={12} /> Lihat Bukti
+                                                    ) : activeTab === 'riwayat' ? (
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border ${o.payment_status === 'Lunas' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                            {o.payment_status === 'Lunas' ? '✅ Lunas' : o.payment_status || o.status}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-block px-3 py-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-sm">Baru</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-3.5 align-middle">
+                                                    {accepting?.id === o.id ? (
+                                                        <div className="flex flex-col gap-2 items-center justify-center">
+                                                            <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm transition-all hover:shadow-md" onClick={handleConfirmAccept}>Simpan</button>
+                                                            <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 rounded-xl text-xs transition-colors" onClick={() => setAccepting(null)}>Batal</button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center gap-2 flex-nowrap">
+                                                            {activeTab === 'baru' && (
+                                                                <button onClick={() => handleStartAccept(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><CheckSquare size={14} /> Acc</button>
+                                                            )}
+                                                            {activeTab === 'bayar' && (
+                                                                o.payment_status === "Menunggu Konfirmasi Bayar" ? (
+                                                                    <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Validasi Lunas</button>
+                                                                ) : (
+                                                                    <button onClick={() => {
+                                                                        if (window.confirm(`Nasabah belum mengirim bukti via Web. Anda yakin ingin menandai pesanan ${o.nama} ini SEBAGAI LUNAS secara manual (Cth: Bayar Cash/WA)?`)) {
+                                                                            handleConfirmPayment(o);
+                                                                        }
+                                                                    }} className="h-9 px-3.5 bg-indigo-50 hover:bg-emerald-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap" title="Klik untuk melunaskan secara manual (bypass)"><Receipt size={14} /> Tandai Lunas</button>
+                                                                )
+                                                            )}
+
+
+                                                            <button title="Hapus Pesanan" onClick={() => handleDeleteOrder(o)} className="grid shrink-0 h-9 w-9 place-items-center rounded-lg bg-white border border-slate-200 hover:bg-rose-500 hover:border-rose-500 text-slate-400 hover:text-white transition-all shadow-sm">
+                                                                <Trash2 size={16} />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                ) : activeTab === 'riwayat' ? (
-                                                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm border ${o.payment_status === 'Lunas' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                                        {o.payment_status === 'Lunas' ? '✅ Lunas' : o.payment_status || o.status}
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-block px-3 py-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-sm">Baru</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-3.5 align-middle">
-                                                {accepting?.id === o.id ? (
-                                                    <div className="flex flex-col gap-2 items-center justify-center">
-                                                        <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm transition-all hover:shadow-md" onClick={handleConfirmAccept}>Simpan</button>
-                                                        <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 rounded-xl text-xs transition-colors" onClick={() => setAccepting(null)}>Batal</button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center justify-center gap-2 flex-nowrap">
-                                                        {activeTab === 'baru' && (
-                                                            <button onClick={() => handleStartAccept(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><CheckSquare size={14} /> Acc</button>
-                                                        )}
-                                                        {activeTab === 'bayar' && (
-                                                            o.payment_status === "Menunggu Konfirmasi Bayar" ? (
-                                                                <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Validasi Lunas</button>
-                                                            ) : (
-                                                                <button onClick={() => {
-                                                                    if (window.confirm(`Nasabah belum mengirim bukti via Web. Anda yakin ingin menandai pesanan ${o.nama} ini SEBAGAI LUNAS secara manual (Cth: Bayar Cash/WA)?`)) {
-                                                                        handleConfirmPayment(o);
-                                                                    }
-                                                                }} className="h-9 px-3.5 bg-indigo-50 hover:bg-emerald-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap" title="Klik untuk melunaskan secara manual (bypass)"><Receipt size={14} /> Tandai Lunas</button>
-                                                            )
-                                                        )}
-
-
-                                                        <button title="Hapus Pesanan" onClick={() => handleDeleteOrder(o)} className="grid shrink-0 h-9 w-9 place-items-center rounded-lg bg-white border border-slate-200 hover:bg-rose-500 hover:border-rose-500 text-slate-400 hover:text-white transition-all shadow-sm">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 

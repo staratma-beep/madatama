@@ -69,13 +69,12 @@ export const WebSettingsTab = () => {
 
     return (
         <div className="w-full flex flex-col gap-6 pb-10">
-            {/* Header Sticky Card */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 bg-transparent sticky top-0 z-20">
                 <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800">
-                        <Monitor className="text-indigo-600" /> Katalog & Eksterior Web
+                    <h2 className="text-[20px] font-bold flex items-center gap-2 text-slate-800">
+                        <Globe size={20} className="text-slate-700" /> Pengaturan Web Publik
                     </h2>
-                    <p className="text-slate-500 text-sm mt-1">Sesuaikan identitas, tampilan beranda, dan gambar promosi publik (Toko Online).</p>
+                    <p className="text-sm text-slate-500 mt-1">Sesuaikan identitas, tampilan beranda, dan gambar promosi publik (Toko Online).</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                     <a
@@ -95,7 +94,7 @@ export const WebSettingsTab = () => {
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                 {/* Kolom Kiri: Informasi & Teks */}
                 <div className="xl:col-span-5 flex flex-col gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] h-full">
                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             Identitas Kontekstual Web
                         </h3>
@@ -144,7 +143,7 @@ export const WebSettingsTab = () => {
 
                 {/* Kolom Kanan: Aset Visual & Branding */}
                 <div className="xl:col-span-7 flex flex-col gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
                         <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
                             Branding & Visual Grafis
                         </h3>
@@ -190,7 +189,7 @@ export const WebSettingsTab = () => {
                         {/* Banner */}
                         <div>
                             <Label className="text-slate-700 font-bold mb-3 block">Gambar Latar Belakang Beranda (Hero Banner)</Label>
-                            <div className="flex gap-5 mt-2 bg-slate-50 p-5 rounded-2xl border border-slate-200/60 flex-col sm:flex-row">
+                            <div className="flex gap-5 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200/60 flex-col sm:flex-row">
                                 <div className="bg-white w-full sm:w-48 h-28 rounded-xl flex-none grid place-items-center overflow-hidden border border-slate-300 shadow-sm relative group">
                                     {data.banner_url ? (
                                         <img src={data.banner_url} alt="Banner" className={`w-full h-full object-cover object-${data.banner_position || 'center'}`} />

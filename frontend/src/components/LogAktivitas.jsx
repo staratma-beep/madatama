@@ -33,19 +33,14 @@ export const LogAktivitas = () => {
 
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/70 backdrop-blur-xl p-5 md:p-6 rounded-3xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <div className="flex items-center gap-4">
-                    <div className="bg-indigo-600/10 p-3 rounded-2xl">
-                        <History size={24} className="text-indigo-600" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-900 to-indigo-600 tracking-tight">
-                            Log Aktivitas
-                        </h1>
-                        <p className="text-sm font-medium text-slate-500 mt-1">
-                            Rekam jejak tindakan dalam sistem (200 aktivitas terakhir).
-                        </p>
-                    </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 bg-transparent">
+                <div>
+                    <h2 className="text-[20px] font-bold flex items-center gap-2 text-slate-800">
+                        <History size={20} className="text-slate-700" /> Log Aktivitas
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                        Rekam jejak tindakan dalam sistem (200 aktivitas terakhir).
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2">

@@ -12,15 +12,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Checkbox } from "./ui/checkbox";
-import { Pencil, Trash2, Plus, Filter, X, TrendingUp, TrendingDown, Eye, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, Filter, X, TrendingUp, TrendingDown, Eye, Search, Wallet, BookText } from "lucide-react";
 
+import { FixedCostsBar } from "./FixedCostsBar";
 const ALL_JENIS = ["Semua", ...JENIS_PEMASUKAN, ...JENIS_PENGELUARAN.filter((j) => j !== "Lain-lain")];
 
-export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cashBalance, profile = {}, sales = [] }) => {
+export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cashBalance, profile = {}, sales = [], fixedCosts, onReload }) => {
   const [f, setF] = useState({ dari: "", sampai: "", kategori: "Semua", jenis: "Semua", search: "" });
   const [showFilter, setShowFilter] = useState(false);
   const [toDelete, setToDelete] = useState(null);
@@ -58,6 +57,12 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
 
   return (
     <div className="space-y-4">
+      <div className="flex-none flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 bg-transparent">
+        <h2 className="text-[20px] font-bold text-slate-800 flex items-center gap-2">
+          <BookText size={20} className="text-slate-700" /> Buku Kas & Rekening
+        </h2>
+      </div>
+      <FixedCostsBar fixedCosts={fixedCosts} onReload={onReload} />
       {/* Header Banner */}
       <div
         className="relative overflow-hidden rounded-2xl p-5 text-white"
