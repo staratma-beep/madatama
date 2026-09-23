@@ -162,24 +162,40 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.1)] bg-white overflow-hidden">
+        {/* Shopify-like Tab row */}
+        <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-white">
+          <div className="flex gap-1">
+            <button className="px-3 py-1.5 bg-[#f1f2f4] text-slate-800 text-[13px] font-semibold rounded-md shadow-sm">Buku Kas (All)</button>
+            <button className="px-2 py-1.5 text-slate-500 hover:bg-slate-50 rounded-md text-[13px] font-bold">+</button>
+          </div>
+          <div className="flex gap-2">
+            <button className="p-1.5 text-slate-600 rounded-md border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors" onClick={() => setShowFilter(!showFilter)}><Filter size={15} /></button>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm" data-testid="kas-table">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80">
-                <th className="px-4 py-3.5 w-10">
-                  <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
+          <table className="w-full text-left border-collapse whitespace-nowrap" data-testid="kas-table">
+            <thead className="bg-[#f7f7f7] border-b border-slate-200 text-slate-600 text-[13px] font-medium shadow-none">
+              <tr>
+                <th className="px-4 py-2.5 w-10 text-center border-r border-slate-100/50">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                    checked={isAllSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
                 </th>
-                <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Tanggal</th>
-                <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Keterangan</th>
-                <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Kategori</th>
-                <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Jenis</th>
-                <th className="px-4 py-3.5 text-right text-xs font-bold uppercase tracking-widest text-slate-400">Nominal</th>
-                <th className="px-4 py-3.5 text-right text-xs font-bold uppercase tracking-widest text-slate-400">Saldo</th>
-                <th className="px-4 py-3.5 text-right text-xs font-bold uppercase tracking-widest text-slate-400">Aksi</th>
+                <th className="px-4 py-2.5 w-32 border-r border-slate-100/50">Tanggal</th>
+                <th className="px-4 py-2.5 min-w-[200px] border-r border-slate-100/50">Keterangan</th>
+                <th className="px-4 py-2.5 w-32 border-r border-slate-100/50">Kategori</th>
+                <th className="px-4 py-2.5 w-32 border-r border-slate-100/50">Jenis</th>
+                <th className="px-4 py-2.5 w-36 text-right border-r border-slate-100/50">Nominal</th>
+                <th className="px-4 py-2.5 w-36 text-right border-r border-slate-100/50">Saldo</th>
+                <th className="px-4 py-2.5 text-center w-28">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100 text-[13px]">
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-14 text-center">
@@ -193,69 +209,76 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
                   </td>
                 </tr>
               )}
-              {filtered.map((t, i) => (
-                <tr key={t.id} className={`group transition-colors ${selected.includes(t.id) ? "bg-indigo-50/70" : "hover:bg-indigo-50/40"}`} data-testid={`kas-row-${t.id}`}>
-                  <td className="px-4 py-3.5">
-                    <Checkbox checked={selected.includes(t.id)} onCheckedChange={(c) => handleSelect(t.id, c)} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-sm text-slate-500 font-medium">{formatTanggal(t.tanggal)}</td>
-                  <td className="px-4 py-3.5 max-w-[200px]">
-                    <p className="font-semibold text-slate-800 truncate">{t.keterangan}</p>
-                    {t.keterangan_tambahan && <p className="text-xs text-slate-400 truncate">{t.keterangan_tambahan}</p>}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${t.kategori === "Pemasukan"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-red-100 text-red-700"
-                      }`}>
-                      {t.kategori === "Pemasukan" ? "▲" : "▼"} {t.kategori}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-slate-500">{t.jenis}</td>
-                  <td className={`whitespace-nowrap px-4 py-3.5 text-right font-mono-num text-sm font-bold ${t.kategori === "Pemasukan" ? "text-emerald-600" : "text-red-500"
-                    }`}>
-                    {t.kategori === "Pemasukan" ? "+" : "-"}{formatRupiah(t.nominal)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-right font-mono-num text-sm font-semibold text-slate-700">
-                    {formatRupiah(t.saldo)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1 text-slate-400">
-                      <button
-                        onClick={() => setViewDetail(t)}
-                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                        title="Detail"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={() => onEdit(t)}
-                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
-                        data-testid={`edit-btn-${t.id}`}
-                        title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => setToDelete(t)}
-                        className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors"
-                        data-testid={`delete-btn-${t.id}`}
-                        title="Hapus"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((t, i) => {
+                const isSelected = selected.includes(t.id);
+                return (
+                  <tr key={t.id} className={`group hover:bg-[#f9fafb] transition-all duration-150 ${isSelected ? 'bg-[#f4f5f7]' : 'bg-white'}`} data-testid={`kas-row-${t.id}`}>
+                    <td className="px-4 py-3 align-middle text-center w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-400 cursor-pointer"
+                        checked={isSelected}
+                        onChange={(e) => handleSelect(t.id, e.target.checked)}
+                      />
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-600">{formatTanggal(t.tanggal)}</td>
+                    <td className="px-4 py-3 max-w-[240px]">
+                      <p className="font-semibold text-slate-800 line-clamp-1">{t.keterangan}</p>
+                      {t.keterangan_tambahan && <p className="text-[11.5px] font-medium text-slate-500 line-clamp-1 mt-0.5" title={t.keterangan_tambahan}>{t.keterangan_tambahan}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-semibold tracking-wide ${t.kategori === "Pemasukan"
+                        ? "bg-[#bbf7d0] text-[#14532d]"
+                        : "bg-[#fecaca] text-[#7f1d1d]"
+                        }`}>
+                        {t.kategori}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-500">{t.jenis}</td>
+                    <td className={`px-4 py-3 text-right font-mono-num font-semibold ${t.kategori === "Pemasukan" ? "text-emerald-700" : "text-rose-700"}`}>
+                      {t.kategori === "Pemasukan" ? "+" : "-"}{formatRupiah(t.nominal)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono-num font-semibold text-slate-800">
+                      {formatRupiah(t.saldo)}
+                    </td>
+                    <td className="px-4 py-3 text-center w-28">
+                      <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setViewDetail(t)}
+                          className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-500 transition-all shadow-sm"
+                          title="Detail"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          onClick={() => onEdit(t)}
+                          className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 transition-all shadow-sm"
+                          data-testid={`edit-btn-${t.id}`}
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setToDelete(t)}
+                          className="grid shrink-0 h-7 w-7 place-items-center rounded bg-white border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-all shadow-sm"
+                          data-testid={`delete-btn-${t.id}`}
+                          title="Hapus"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             {filtered.length > 0 && (
-              <tfoot>
-                <tr className="border-t-2 border-indigo-100 bg-indigo-50/50">
-                  <td colSpan={5} className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-indigo-600">
-                    {hasFilter ? `Selisih (${filtered.length} transaksi)` : `Total Saldo Akhir (${filtered.length} transaksi)`}
+              <tfoot className="bg-[#f9fafb] border-t border-slate-200">
+                <tr>
+                  <td colSpan={5} className="px-4 py-3 text-[13px] font-semibold text-slate-600">
+                    {hasFilter ? `Total Terfilter (${filtered.length} riwayat)` : `Total Semua Riwayat (${filtered.length} transaksi)`}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono-num text-sm font-bold text-indigo-700">
+                  <td className="px-4 py-3 text-right font-mono-num font-bold text-slate-800 text-[13px]">
                     {formatRupiah(hasFilter ? totalMasuk - totalKeluar : cashBalance)}
                   </td>
                   <td colSpan={2} />

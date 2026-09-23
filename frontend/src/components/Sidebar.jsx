@@ -1,8 +1,8 @@
 ﻿import React from "react";
-import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, Printer } from "lucide-react";
 import { THEME_COLORS } from "../lib/theme";
 
-export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, authUser, sidebarConfig, appTheme = "indigo" }) {
+export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, authUser, sidebarConfig, appTheme = "indigo", settings }) {
 
     const defaultGroups = [
         { title: "Dashboard", keys: ["dashboard"] },
@@ -42,33 +42,73 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
 
     return (
         <aside
-            className={`sticky top-0 z-50 flex h-screen flex-col border-r border-slate-100 bg-white/95 backdrop-blur-xl shadow-lg transition-all duration-300 ${expanded ? "w-64" : "w-[4.5rem]"}`}
+            className={`sticky top-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-[#f1f1f1] transition-all duration-300 ${expanded ? "w-64" : "w-[4.5rem]"}`}
         >
             <div className="flex items-center justify-between p-4 border-b border-slate-100/80">
-                <div className={`flex items-center overflow-hidden transition-all duration-300 ${expanded ? "w-auto opacity-100" : "w-0 opacity-0"}`}>
-                    <span className="font-heading text-[15px] font-extrabold text-slate-800 whitespace-nowrap pl-2">Navigasi Utama</span>
-                </div>
+                {expanded && (
+                    <div className="flex items-center gap-2.5 overflow-hidden animate-in fade-in">
+                        {settings?.logo ? (
+                            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+                                <img src={settings.logo} alt="Logo" className="h-full w-full object-contain drop-shadow-sm" />
+                            </div>
+                        ) : (
+                            <div
+                                className="relative grid h-8 w-8 overflow-hidden place-items-center rounded-[10px] text-white shadow-sm shrink-0"
+                                style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+                            >
+                                <Printer size={16} />
+                            </div>
+                        )}
+                        <div className="flex flex-col whitespace-nowrap overflow-hidden">
+                            <span className="font-heading text-[13px] font-extrabold text-slate-800 leading-tight truncate">
+                                {settings?.nama_usaha || "Navigasi Utama"}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                                {settings?.tagline_usaha || "Official System"}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 <button
                     onClick={onToggle}
-                    className={`grid h-9 w-9 ${theme.lightBg} ${theme.hoverBg} ${theme.text} ${theme.hoverText} place-items-center rounded-xl transition-colors shrink-0 ${expanded ? "" : "mx-auto"}`}
+                    title="Buka/Tutup Menu"
+                    className={expanded
+                        ? `grid h-8 w-8 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 place-items-center rounded-full transition-colors shrink-0 shadow-sm`
+                        : settings?.logo
+                            ? "relative flex h-10 w-10 shrink-0 mx-auto transition-transform hover:scale-105 items-center justify-center"
+                            : "relative grid h-9 w-9 overflow-hidden place-items-center rounded-full text-white shadow-sm shrink-0 mx-auto transition-transform hover:scale-105"
+                    }
+                    style={(!expanded && !settings?.logo) ? { background: "linear-gradient(135deg, #4f46e5, #7c3aed)" } : undefined}
                 >
-                    {expanded ? <ChevronLeft size={20} /> : <Menu size={20} />}
+                    {expanded ? (
+                        <ChevronLeft size={16} strokeWidth={2.5} />
+                    ) : (
+                        settings?.logo ? (
+                            <img src={settings.logo} alt="Logo" className="h-full w-full object-contain drop-shadow-sm" />
+                        ) : (
+                            <Printer size={18} />
+                        )
+                    )}
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-5 overflow-x-hidden p-3 gap-6 flex flex-col scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="flex-1 overflow-y-auto py-2 overflow-x-hidden px-2.5 gap-1.5 flex flex-col scrollbar-thin scrollbar-thumb-slate-200">
                 {groups.map((group, idx) => {
                     const visibleTabs = getVisibleTabsInGroup(group.keys);
                     if (visibleTabs.length === 0) return null;
 
                     return (
-                        <div key={idx} className="flex flex-col gap-1.5">
+                        <div key={idx} className="flex flex-col gap-0.5">
                             {expanded ? (
-                                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    {group.title}
-                                </div>
+                                group.title !== "Dashboard" && (
+                                    <div className="px-3 pb-1 pt-4 mt-1 text-[13px] font-semibold text-slate-700 flex items-center justify-between group cursor-default">
+                                        <span>{group.title}</span>
+                                        <ChevronRight size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                )
                             ) : (
-                                <div className="h-4 border-b border-slate-100/50 mb-2 w-8 mx-auto" />
+                                group.title !== "Dashboard" && <div className="h-px bg-slate-200/60 my-2 w-6 mx-auto" />
                             )}
                             {visibleTabs.map((t) => {
                                 const isActive = currentTab === t.key;
@@ -77,16 +117,16 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
                                         key={t.key}
                                         onClick={() => onSelectTab(t.key)}
                                         title={!expanded ? t.label : undefined}
-                                        className={`group relative flex items-center gap-3 rounded-xl transition-all duration-200 mx-auto ${expanded ? "w-full px-3 py-2.5" : "w-10 h-10 justify-center"} ${isActive
-                                            ? `${theme.primary} text-white shadow-md ${theme.shadow}`
-                                            : `text-slate-500 ${theme.hoverBg} ${theme.hoverText}`
+                                        className={`group relative flex items-center gap-3 rounded-[8px] transition-all duration-150 mx-auto ${expanded ? "w-full px-3 py-[6px]" : "w-10 h-10 justify-center"} ${isActive
+                                            ? `bg-white text-slate-900 font-bold shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-slate-200/50`
+                                            : `text-slate-600 hover:bg-slate-200/50 hover:text-slate-900 font-medium`
                                             }`}
                                     >
                                         <div className="shrink-0 flex items-center justify-center">
-                                            <t.icon size={expanded ? 18 : 20} className={isActive ? "text-white" : `text-slate-400 group-hover:${theme.text} transition-colors`} />
+                                            <t.icon size={19} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-slate-900" : `text-slate-600 group-hover:text-slate-900 transition-colors`} fill={isActive ? "none" : "none"} />
                                         </div>
                                         {expanded && (
-                                            <span className="text-sm font-semibold whitespace-nowrap text-left truncate flex-1">
+                                            <span className="text-[13px] whitespace-nowrap text-left truncate flex-1">
                                                 {t.label}
                                             </span>
                                         )}

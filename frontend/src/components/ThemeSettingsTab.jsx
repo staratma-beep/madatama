@@ -46,6 +46,7 @@ const DEFAULT_GROUPS = [
 export const ThemeSettingsTab = () => {
     const [settings, setSettings] = useState(null);
     const [theme, setTheme] = useState("indigo");
+    const [darkMode, setDarkMode] = useState(false);
     const [groups, setGroups] = useState(DEFAULT_GROUPS);
     const [tabNames, setTabNames] = useState({});
     const [loading, setLoading] = useState(true);
@@ -68,6 +69,7 @@ export const ThemeSettingsTab = () => {
             const s = await api.getSettings();
             setSettings(s);
             setTheme(s.app_theme || "indigo");
+            setDarkMode(s.dark_mode || false);
             setGroups(s.sidebar_config && s.sidebar_config.length > 0 ? s.sidebar_config : DEFAULT_GROUPS);
             setTabNames(s.tab_names || {});
             setRolePermissions(s.role_permissions || defaultRoles);
@@ -75,6 +77,7 @@ export const ThemeSettingsTab = () => {
             setCfg({
                 saldo_awal: formatNumberInput(String(s.saldo_awal || 0)),
                 nama_usaha: s.nama_usaha || "",
+                tagline_usaha: s.tagline_usaha || "",
                 alamat: s.alamat || "",
                 telepon: s.telepon || "",
                 logo: s.logo || "",
@@ -111,10 +114,12 @@ export const ThemeSettingsTab = () => {
                 ...settings,
                 sidebar_config: groups,
                 app_theme: theme,
+                dark_mode: darkMode,
                 tab_names: tabNames,
                 role_permissions: rolePermissions,
                 saldo_awal: parseNumber(cfg.saldo_awal),
                 nama_usaha: cfg.nama_usaha,
+                tagline_usaha: cfg.tagline_usaha,
                 alamat: cfg.alamat,
                 telepon: cfg.telepon,
                 logo: cfg.logo,
@@ -218,7 +223,7 @@ export const ThemeSettingsTab = () => {
                             {/* Sub-kolom 1 */}
                             <div className="space-y-6">
                                 <div className="space-y-3">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Logo Usaha (Untuk Nota)</Label>
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Logo Utama (Untuk Sidebar & Nota)</Label>
                                     <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
                                         <div className="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
                                             {cfg.logo ? <img src={cfg.logo} alt="logo" className="h-full w-full object-contain" /> : <ImageIcon size={26} className="text-slate-300" />}
@@ -250,6 +255,10 @@ export const ThemeSettingsTab = () => {
                                     <Label className="font-semibold text-slate-700">Nama Usaha</Label>
                                     <Input value={cfg.nama_usaha} onChange={(e) => setCfg({ ...cfg, nama_usaha: e.target.value })} placeholder="Ketik nama bisnis Anda di sini" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
                                 </div>
+                                <div className="space-y-1.5">
+                                    <Label className="font-semibold text-slate-700">Slogan / Tagline (Di Bawah Nama)</Label>
+                                    <Input value={cfg.tagline_usaha} onChange={(e) => setCfg({ ...cfg, tagline_usaha: e.target.value })} placeholder="Cth: Percetakan & Branding (atau biarkan kosong)" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
+                                </div>
                             </div>
 
                             {/* Sub-kolom 2 */}
@@ -274,7 +283,7 @@ export const ThemeSettingsTab = () => {
                         </div>
                     </div>
 
-                    {/* Tema Visual */}
+                    {/* Tema Visual & Mode Gelap */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
                             <Palette size={18} className="text-slate-400" /> Warna Tema Aplikasi
@@ -291,7 +300,28 @@ export const ThemeSettingsTab = () => {
                                 </button>
                             ))}
                         </div>
-                        <p className="text-xs text-slate-400 mt-4 bg-slate-50 p-3 rounded-lg border border-slate-100">*Catatan: Perubahan warna tema akan sepenuhnya dimuat setelah halaman direfresh/disimpan.</p>
+
+                        {/* Toggle Mode Gelap */}
+                        <div className="mt-8 border-t border-slate-100 pt-6">
+                            <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2">Pilih Nuansa Dashboard</h4>
+                            <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all">
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={darkMode}
+                                    onChange={(e) => setDarkMode(e.target.checked)}
+                                />
+                                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${darkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-700 group-hover:text-slate-900 transition-colors text-sm">Mode Gelap (Dark Mode)</span>
+                                    <span className="text-xs text-slate-500">Tampilan redup untuk kenyamanan mata & nuansa futuristik (berlaku di semua web admin ini).</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 mt-5 bg-slate-50 p-3 rounded-lg border border-slate-100">*Catatan: Perubahan warna tema dan nuansa akan sepenuhnya dimuat setelah konfigurasi disimpan / halaman direfresh.</p>
                     </div>
 
                     {/* Hak Akses User */}

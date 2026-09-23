@@ -44,7 +44,7 @@ const List = ({ title, items, accent, onSettle, onUnsettle, onDelete, onDeleteMu
   const isAllSelected = items.length > 0 && selectedIds.length === items.length;
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm overflow-hidden flex flex-col h-full relative">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col h-full relative">
       <div className={`flex items-center justify-between px-5 py-4 ${accent.header}`}>
         <div>
           <p className="font-heading text-lg font-bold text-white shadow-sm">{title}</p>
@@ -55,17 +55,17 @@ const List = ({ title, items, accent, onSettle, onUnsettle, onDelete, onDeleteMu
 
       <div className="overflow-auto flex-1 pb-16">
         <table className="w-full text-left text-sm relative">
-          <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur shadow-sm border-b border-slate-200">
+          <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur shadow-sm border-b border-slate-200 text-slate-500 text-[11px] font-extrabold uppercase tracking-widest">
             <tr>
-              <th className="px-4 py-3.5 w-10">
+              <th className="px-5 py-4 w-10 text-center">
                 <Checkbox checked={isAllSelected} onCheckedChange={selectAll} className="rounded-full data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600" />
               </th>
-              <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Nama / Keterangan</th>
-              <th className="px-4 py-3.5 text-right w-[110px] text-xs font-bold uppercase tracking-widest text-slate-400">Nominal</th>
-              <th className="px-4 py-3.5 text-right w-24 text-xs font-bold uppercase tracking-widest text-slate-400">Aksi</th>
+              <th className="px-4 py-4">Nama / Keterangan</th>
+              <th className="px-4 py-4 text-right w-[110px]">Nominal</th>
+              <th className="px-5 py-4 text-center w-24">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-slate-100 text-sm">
             {items.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-14 text-center">
@@ -75,37 +75,40 @@ const List = ({ title, items, accent, onSettle, onUnsettle, onDelete, onDeleteMu
                 </td>
               </tr>
             )}
-            {items.map((r) => (
-              <tr key={r.id} className={`group transition-colors ${selectedIds.includes(r.id) ? "bg-indigo-50/70" : "hover:bg-indigo-50/40"}`} data-testid={`record-row-${r.id}`}>
-                <td className="px-4 py-3.5 w-10">
-                  <Checkbox checked={selectedIds.includes(r.id)} onCheckedChange={(c) => toggleSelect(r.id, c)} className="rounded-full data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600" />
-                </td>
-                <td className="px-4 py-3.5 max-w-[200px]">
-                  <p className="font-semibold text-slate-800 truncate">{r.nama}</p>
-                  <p className="text-xs text-slate-400 truncate">{formatTanggal(r.tanggal)} {r.keterangan && `· ${r.keterangan}`}</p>
-                </td>
-                <td className="px-4 py-3.5 text-right">
-                  <p className={`font-mono-num font-bold text-sm ${accent.text}`}>{formatRupiah(r.nominal)}</p>
-                  <span className={`inline-flex rounded-full px-2 py-0.5 mt-1 text-[10px] font-bold tracking-wider ${r.status === "Lunas" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{r.status}</span>
-                </td>
-                <td className="px-4 py-3.5 text-right w-24">
-                  <div className="flex items-center justify-end gap-1 text-slate-400">
-                    {r.status === "Belum Lunas" ? (
-                      <button onClick={() => onSettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-emerald-100 text-slate-400 hover:text-emerald-600 transition-colors" title="Tandai Lunas">
-                        <CheckCircle2 size={15} />
+            {items.map((r) => {
+              const isSelected = selectedIds.includes(r.id);
+              return (
+                <tr key={r.id} className={`group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 ${isSelected ? 'bg-indigo-50/40 shadow-[inset_4px_0_0_0_rgba(99,102,241,1)]' : 'bg-white'}`} data-testid={`record-row-${r.id}`}>
+                  <td className="px-5 py-3.5 align-middle text-center w-12">
+                    <Checkbox checked={isSelected} onCheckedChange={(c) => toggleSelect(r.id, c)} className="rounded-full data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600" />
+                  </td>
+                  <td className="px-4 py-3.5 w-full">
+                    <p className="font-bold text-slate-800 line-clamp-1 leading-snug">{r.nama}</p>
+                    <p className="text-xs font-medium text-slate-400 line-clamp-1 mt-0.5">{formatTanggal(r.tanggal)} {r.keterangan && `· ${r.keterangan}`}</p>
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <p className={`font-mono-num font-bold text-sm ${accent.text}`}>{formatRupiah(r.nominal)}</p>
+                    <span className={`inline-flex rounded-md px-2 py-0.5 mt-1 text-[10px] uppercase font-bold tracking-wider ${r.status === "Lunas" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>{r.status}</span>
+                  </td>
+                  <td className="px-6 py-3.5 text-center w-32">
+                    <div className="flex items-center justify-end gap-1 text-slate-400">
+                      {r.status === "Belum Lunas" ? (
+                        <button onClick={() => onSettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-emerald-100 text-slate-400 hover:text-emerald-600 transition-colors" title="Tandai Lunas">
+                          <CheckCircle2 size={15} />
+                        </button>
+                      ) : (
+                        <button onClick={() => onUnsettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors" title="Batal Lunas">
+                          <RotateCcw size={15} />
+                        </button>
+                      )}
+                      <button onClick={() => onDelete(r)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors" title="Hapus">
+                        <Trash2 size={15} />
                       </button>
-                    ) : (
-                      <button onClick={() => onUnsettle(r.id)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors" title="Batal Lunas">
-                        <RotateCcw size={15} />
-                      </button>
-                    )}
-                    <button onClick={() => onDelete(r)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors" title="Hapus">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

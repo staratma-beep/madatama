@@ -40,7 +40,16 @@ function App() {
   const [products, setProducts] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
   const [settings, setSettings] = useState({});
-  const [tab, setTab] = useState("kas");
+  const [tab, setTab] = useState(() => {
+    const saved = localStorage.getItem("madatama_user");
+    if (saved) {
+      try {
+        const u = JSON.parse(saved);
+        return u.role === "Produksi" ? "produksi" : "dashboard";
+      } catch (e) { }
+    }
+    return "dashboard";
+  });
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -81,7 +90,14 @@ function App() {
       }
       link.href = settings.favicon;
     }
-  }, [settings.nama_usaha, settings.favicon]);
+
+    // Toggle dark mode via CSS Invert (Fastest way to support existing light-coded UI)
+    if (settings.dark_mode) {
+      document.documentElement.classList.add('dark-theme');
+    } else {
+      document.documentElement.classList.remove('dark-theme');
+    }
+  }, [settings.nama_usaha, settings.favicon, settings.dark_mode]);
 
   const cashBalance = useMemo(() => computeCashBalance(transactions, saldoAwal), [transactions, saldoAwal]);
   const curMonth = monthKey(todayISO());
@@ -223,7 +239,7 @@ function App() {
   }
 
   return (
-    <div className="App flex min-h-screen" style={{ background: "linear-gradient(135deg, #eef2ff 0%, #f0f4ff 50%, #faf5ff 100%)" }}>
+    <div className="App flex min-h-screen bg-[#f1f1f1]">
       <Toaster position="top-center" richColors expand />
 
       <Sidebar
@@ -235,36 +251,18 @@ function App() {
         authUser={authUser}
         sidebarConfig={settings?.sidebar_config}
         appTheme={settings?.app_theme}
+        settings={settings}
       />
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         {/* ===== HEADER ===== */}
-        <header className="sticky top-0 z-40 border-b border-indigo-100/70 bg-white/80 shadow-sm backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-black/5 bg-[#f1f1f1] shadow-sm backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
-              <div
-                className="relative grid h-10 w-10 overflow-hidden place-items-center rounded-xl text-white shadow-md shrink-0"
-                style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
-              >
-                {settings.logo ? (
-                  <img src={settings.logo} alt="Logo" className="absolute inset-0 h-full w-full object-cover bg-white" />
-                ) : (
-                  <Printer size={20} />
-                )}
-              </div>
-              <div>
-                <h1 className="font-heading text-lg font-bold leading-tight text-slate-900">
-                  {settings.nama_usaha || "Bukuku Pro"}
-                </h1>
-                <p className="text-xs text-slate-400 font-medium">Pembukuan Percetakan & Branding</p>
-              </div>
+              {/* Dipindahkan ke Sidebar */}
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                <TrendingUp size={12} />
-                Sistem Aktif
-              </div>
-              <Toolbar transactions={transactions} saldoAwal={saldoAwal} onReload={reload} />
+
               <div className="flex items-center gap-3 ml-2 pl-3 sm:ml-4 sm:pl-4 border-l border-slate-200">
                 <a
                   href={`http://${window.location.hostname}:5173`}
@@ -303,9 +301,9 @@ function App() {
           )}
 
           {/* ===== MAIN CONTENT TABS ===== */}
-          <div className="rounded-2xl border border-indigo-100/60 bg-white/90 shadow-sm backdrop-blur-sm overflow-hidden">
+          <div className="w-full">
             {/* Tab Content */}
-            <div className="p-5 overflow-x-auto">
+            <div className="pb-12">
               {tab === "dashboard" && (
                 <Dashboard
                   cashBalance={cashBalance} monthProfit={monthProfit} currentMonthKey={curMonth}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../lib/api";
 import { CheckSquare, Trash2, Receipt, Search, Image as ImageIcon, ShoppingCart } from "lucide-react";
 import { parseNumber, formatNumberInput } from "../lib/format";
@@ -20,6 +21,7 @@ export const WebOrdersTab = ({ onAccepted }) => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [confirmModal, setConfirmModal] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
 
     const handleSaveEdit = async () => {
         try {
@@ -396,9 +398,9 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                             <span className="text-[10px] font-bold text-slate-600 bg-slate-100 shadow-sm px-3 py-1 rounded-full border border-slate-200 uppercase tracking-wider">Menunggu Bayar</span>
                                                         )}
                                                         {o.bukti_bayar && (
-                                                            <a href={o.bukti_bayar} target="_blank" rel="noreferrer" className="text-[10px] flex gap-1.5 items-center font-bold text-indigo-700 mt-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full transition-colors hover:bg-indigo-600 hover:text-white shadow-sm">
+                                                            <button onClick={() => setPreviewImage(o.bukti_bayar)} className="text-[10px] flex gap-1.5 items-center font-bold text-indigo-700 mt-1 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full transition-colors hover:bg-indigo-600 hover:text-white shadow-sm">
                                                                 <ImageIcon size={12} /> Lihat Bukti
-                                                            </a>
+                                                            </button>
                                                         )}
                                                     </div>
                                                 ) : activeTab === 'riwayat' ? (
@@ -422,16 +424,16 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                         )}
                                                         {activeTab === 'bayar' && (
                                                             o.payment_status === "Menunggu Konfirmasi Bayar" ? (
-                                                                <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Konfirmasi Lunas</button>
+                                                                <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Validasi Lunas</button>
                                                             ) : (
-                                                                <span className="text-[10px] text-slate-400 italic">Menunggu pelanggan bayar</span>
+                                                                <button onClick={() => {
+                                                                    if (window.confirm(`Nasabah belum mengirim bukti via Web. Anda yakin ingin menandai pesanan ${o.nama} ini SEBAGAI LUNAS secara manual (Cth: Bayar Cash/WA)?`)) {
+                                                                        handleConfirmPayment(o);
+                                                                    }
+                                                                }} className="h-9 px-3.5 bg-indigo-50 hover:bg-emerald-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap" title="Klik untuk melunaskan secara manual (bypass)"><Receipt size={14} /> Tandai Lunas</button>
                                                             )
                                                         )}
 
-                                                        <button title="Edit Pesanan" onClick={() => {
-                                                            setEditingOrder(o);
-                                                            setEditForm({ nama: o.nama, kontak: o.kontak });
-                                                        }} className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold justify-center rounded-lg text-xs transition-all shadow-sm whitespace-nowrap">Edit</button>
 
                                                         <button title="Hapus Pesanan" onClick={() => handleDeleteOrder(o)} className="grid shrink-0 h-9 w-9 place-items-center rounded-lg bg-white border border-slate-200 hover:bg-rose-500 hover:border-rose-500 text-slate-400 hover:text-white transition-all shadow-sm">
                                                             <Trash2 size={16} />
@@ -493,6 +495,43 @@ export const WebOrdersTab = ({ onAccepted }) => {
                     </AlertDialog>
                 )}
             </div>
+
+            {/* Modal Image Preview - Memaksa keluar dari jendela tab dengan Portal */}
+            {previewImage && createPortal(
+                <div
+                    className="fixed inset-0 z-[999999] bg-black/30 backdrop-blur-sm flex items-center justify-center animate-in fade-in"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    {/* Tombol Close Mengambang di Pojok Kanan Atas */}
+                    <button
+                        className="fixed top-6 right-6 md:top-10 md:right-10 z-[999999] w-12 h-12 bg-white/10 hover:bg-rose-500 text-white rounded-full flex items-center justify-center transition-colors shadow-lg backdrop-blur text-xl"
+                        onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+                        title="Tutup Layar (Esc)"
+                    >
+                        ✕
+                    </button>
+
+                    {/* Gambar Full Layar Bebas Batasan */}
+                    <img
+                        src={previewImage}
+                        alt="Bukti Transfer"
+                        className="w-full h-full object-contain max-h-[100dvh] select-none p-4 md:p-8"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+
+                    {/* Tombol Tab Baru Mengambang di Bawah Tengah */}
+                    <a
+                        href={previewImage}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="fixed bottom-8 lg:bottom-12 left-1/2 -translate-x-1/2 px-6 py-2.5 bg-white/20 hover:bg-white/90 text-white hover:text-slate-900 font-bold rounded-full shadow-2xl backdrop-blur transition-all text-sm border border-white/30 z-[999999]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        Buka di Tab Baru ↪
+                    </a>
+                </div>,
+                document.body
+            )}
         </div >
     );
 };

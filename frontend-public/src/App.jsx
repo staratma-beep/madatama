@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ShoppingBag, Search, ChevronRight, Package, Truck, Printer, Phone, Trash2, ArrowLeft, ShoppingCart, CheckCircle2, Image as ImageIcon, Check, Menu, X, User, Copy } from 'lucide-react';
 import { getPublicProducts, createPublicOrder, trackPublicOrder, getPublicSettings, payPublicOrder, uploadImage, requestOTP } from './lib/api';
 import { Toaster, toast } from 'sonner';
@@ -44,23 +44,25 @@ const useRecentOrders = () => {
 // Navbar Component
 const Navbar = ({ cartCount, settings }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isTransparent = location.pathname === '/' && settings?.banner_url;
 
   return (
     <>
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
+      <nav className={`w-full absolute top-0 z-50 transition-all ${isTransparent ? 'bg-transparent border-transparent pt-2' : 'bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky'}`}>
         <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
+          <Link to="/" className={`flex items-center gap-2 font-bold text-xl ${isTransparent ? 'text-white drop-shadow-md' : 'text-indigo-600'}`}>
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="w-8 h-8 object-contain" />
             ) : (
               <Printer size={24} />
             )}
-            <span>{settings?.business_name || "Madatama Print"}</span>
+            <span className={isTransparent ? 'text-white' : ''}>{settings?.business_name || "Madatama Print"}</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">Katalog</Link>
-            <Link to="/track" onClick={() => window.dispatchEvent(new Event('resetTrack'))} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">Lacak Pesanan</Link>
-            <Link to="/cart" className="relative text-slate-700 hover:text-indigo-600 p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors mr-2 sm:mr-0">
+            <Link to="/" className={`text-sm font-medium transition-colors hidden sm:block ${isTransparent ? 'text-white/90 hover:text-white' : 'text-slate-600 hover:text-indigo-600'}`}>Katalog</Link>
+            <Link to="/track" onClick={() => window.dispatchEvent(new Event('resetTrack'))} className={`text-sm font-medium transition-colors hidden sm:block ${isTransparent ? 'text-white/90 hover:text-white' : 'text-slate-600 hover:text-indigo-600'}`}>Lacak Pesanan</Link>
+            <Link to="/cart" className={`relative p-2 rounded-full transition-colors mr-2 sm:mr-0 ${isTransparent ? 'text-white hover:bg-white/20' : 'text-slate-700 hover:text-indigo-600 bg-slate-50 hover:bg-slate-100'}`}>
               <ShoppingCart size={20} />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
@@ -70,7 +72,7 @@ const Navbar = ({ cartCount, settings }) => {
             </Link>
             {/* Hamburger Button */}
             <button
-              className="sm:hidden text-slate-600 hover:text-indigo-600 p-2"
+              className={`sm:hidden p-2 ${isTransparent ? 'text-white hover:bg-white/20 rounded-full' : 'text-slate-600 hover:text-indigo-600'}`}
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu size={24} />
@@ -201,131 +203,163 @@ const Catalog = ({ cart, setCart }) => {
   const imgOpacity = (settings.banner_opacity !== undefined ? settings.banner_opacity : 40) / 100;
 
   return (
-    <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-      <div className={`text-center mb-4 py-4 md:py-6 rounded-3xl border shadow-sm relative overflow-hidden ${settings.banner_url ? 'bg-slate-900 border-slate-800' : getGradientClass(settings.theme_gradient)}`}>
-        {settings.banner_url && (
+    <>
+      <div className={`relative w-full ${settings.banner_url ? 'h-[35vh] min-h-[320px] bg-slate-900 border-none rounded-none overflow-hidden' : 'pt-24 pb-8 overflow-hidden ' + getGradientClass(settings.theme_gradient)}`}>
+        {settings.banner_url ? (
           <div className="absolute inset-0">
             <img
               src={settings.banner_url} alt="Banner"
               className={`w-full h-full object-cover ${objPosition}`}
               style={{ opacity: imgOpacity }}
             />
-            <div className={`absolute inset-0 ${getOverlayGradient(settings.theme_gradient)}`} />
+            {/* Dark gradient overlay for text readability */}
+            <div className={`absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/40 to-transparent`} />
+            <div className={`absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent`} />
           </div>
+        ) : (
+          <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px]" />
         )}
-        <h1 className={`text-xl md:text-3xl font-black mb-1 px-4 md:px-8 tracking-tight leading-tight max-w-3xl mx-auto relative z-10 whitespace-pre-wrap ${settings.banner_url ? 'text-white' : 'text-slate-900'}`}>{settings.title}</h1>
-        <p className={`max-w-lg mx-auto px-4 md:px-8 relative z-10 text-xs md:text-sm leading-relaxed font-medium ${settings.banner_url ? 'text-slate-300' : 'text-slate-600'}`}>{settings.subtitle}</p>
+
+        {/* Aesthetic Vectors (Circles / Crosshairs) inspired by Shopify reference */}
+        <div className="absolute -top-16 right-12 w-64 h-64 border border-white/20 rounded-full opacity-60 hidden md:block pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/40 font-light">+</div>
+        </div>
+        <div className="absolute -bottom-8 -left-8 w-48 h-48 border border-white/20 rounded-full opacity-60 hidden md:block pointer-events-none"></div>
+        <div className="absolute top-1/2 left-4 w-8 h-8 opacity-50 hidden md:block pointer-events-none">
+          <div className="absolute top-1/2 left-0 w-full h-px bg-white/40"></div>
+          <div className="absolute top-0 left-1/2 w-px h-full bg-white/40"></div>
+        </div>
+        <div className="absolute bottom-1/4 right-[20%] w-4 h-4 opacity-30 pointer-events-none">
+          <div className="absolute top-1/2 left-0 w-full h-px bg-white/40"></div>
+          <div className="absolute top-0 left-1/2 w-px h-full bg-white/40"></div>
+        </div>
+
+        <div className="relative z-10 max-w-[1440px] w-full h-full mx-auto px-6 lg:px-16 flex flex-col justify-center pt-16 pb-4">
+          <p className="text-white/80 font-bold tracking-[0.2em] text-[9px] sm:text-[11px] mb-2 uppercase drop-shadow-md">
+            {settings.subtitle || "FEATURED COLLECTION"}
+          </p>
+          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black mb-5 tracking-tighter leading-[1.1] max-w-2xl whitespace-pre-wrap ${settings.banner_url ? 'text-white drop-shadow-2xl' : 'text-slate-900'}`}>
+            {settings.title || "PUSHING\nBOUNDARIES"}
+          </h1>
+
+          <a href="#catalog" className="w-fit text-xs font-bold tracking-widest text-white uppercase border border-white/60 px-6 py-2.5 hover:bg-white hover:text-slate-900 transition-all duration-300 backdrop-blur-sm shadow-xl">
+            SHOP NOW
+          </a>
+        </div>
       </div>
 
-      {products.length > 0 && (
-        <div className="sticky top-20 z-40 bg-white/90 backdrop-blur-lg rounded-2xl border border-slate-200 p-3 sm:px-4 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-5 shadow-sm transition-all duration-300 mx-auto">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-            {categories.map(c => (
-              <button
-                key={c}
-                onClick={() => setActiveKategori(c)}
-                className={`px-4 py-2 flex-none rounded-full text-sm font-bold transition-all ${activeKategori === c
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-              >
-                {c}
-              </button>
+      <div id="catalog" className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+        {products.length > 0 && (
+          <div className="sticky top-20 z-40 bg-white/90 backdrop-blur-lg rounded-2xl border border-slate-200 p-3 sm:px-4 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-5 shadow-sm transition-all duration-300 mx-auto">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              {categories.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setActiveKategori(c)}
+                  className={`px-4 py-2 flex-none rounded-full text-sm font-bold transition-all ${activeKategori === c
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full md:w-72 flex-none">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Cari kebutuhan Anda..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-slate-100 animate-pulse rounded-2xl" />)}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 bg-slate-50 border border-slate-200 rounded-3xl">
+            <Search className="mx-auto text-slate-300 mb-3" size={40} />
+            <p className="text-slate-500 font-medium">Tidak ada produk yang sesuai dengan pencarian Anda.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-6">
+            {filteredProducts.map(p => (
+              <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
+                <div className="aspect-[4/3] sm:aspect-[5/4] bg-slate-100 relative overflow-hidden">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.nama} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                      <Package size={32} />
+                      <span className="text-[10px] font-medium uppercase tracking-widest mt-1.5">{p.kategori}</span>
+                    </div>
+                  )}
+                  <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-700 shadow-sm">
+                    {p.kategori}
+                  </div>
+                </div>
+                <div className="p-3 sm:p-4 flex flex-col flex-1">
+                  <h3 className="font-bold text-sm text-slate-900 mb-1 leading-snug line-clamp-2" title={p.nama}>{p.nama}</h3>
+                  {p.deskripsi && <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1 mb-2" title={p.deskripsi}>{p.deskripsi}</p>}
+
+                  <div className="flex flex-wrap items-center gap-1 mt-auto pb-2.5 border-b border-slate-50">
+                    <span className="text-[10px] font-semibold text-slate-400 relative top-px">Est.</span>
+                    <p className="font-black text-indigo-600 text-sm sm:text-[15px]">{formatRupiah(p.harga_jual)}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-none flex bg-slate-50 border border-slate-200 rounded-lg h-[34px] overflow-hidden shadow-sm">
+                        <button
+                          onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, (prev[p.id] || 1) - 1) }))}
+                          className="w-8 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold"
+                        >-</button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={cardQtys[p.id] || 1}
+                          onChange={(e) => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                          className="w-8 flex-none bg-transparent text-center font-bold text-slate-700 border-x border-slate-200 focus:outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: (prev[p.id] || 1) + 1 }))}
+                          className="w-8 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold"
+                        >+</button>
+                      </div>
+
+                      <div className="flex-1 flex gap-1.5 h-[34px]">
+                        <button onClick={() => addToCart(p)} className="flex-1 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm" title="Tambah ke Keranjang">
+                          <ShoppingCart size={14} />
+                        </button>
+
+                        {/(kaos|baju|pakaian)/i.test(p.nama + ' ' + (p.kategori || '')) && (
+                          <button onClick={() => setEditingProduct(p)} className="flex-1 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm" title="Desain Kustom">
+                            <ImageIcon size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
+        )}
 
-          <div className="relative w-full md:w-72 flex-none">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cari kebutuhan Anda..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-sm"
-            />
-          </div>
-        </div>
-      )}
+        {editingProduct && (
+          <CustomEditor product={editingProduct} onClose={() => setEditingProduct(null)} onAddToCart={addToCart} />
+        )}
 
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-slate-100 animate-pulse rounded-2xl" />)}
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="text-center py-16 bg-slate-50 border border-slate-200 rounded-3xl">
-          <Search className="mx-auto text-slate-300 mb-3" size={40} />
-          <p className="text-slate-500 font-medium">Tidak ada produk yang sesuai dengan pencarian Anda.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-6">
-          {filteredProducts.map(p => (
-            <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col">
-              <div className="aspect-[4/3] sm:aspect-[5/4] bg-slate-100 relative overflow-hidden">
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.nama} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                    <Package size={32} />
-                    <span className="text-[10px] font-medium uppercase tracking-widest mt-1.5">{p.kategori}</span>
-                  </div>
-                )}
-                <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-700 shadow-sm">
-                  {p.kategori}
-                </div>
-              </div>
-              <div className="p-3 sm:p-4 flex flex-col flex-1">
-                <h3 className="font-bold text-sm text-slate-900 mb-1 leading-snug line-clamp-2" title={p.nama}>{p.nama}</h3>
-                {p.deskripsi && <p className="text-[10px] sm:text-[11px] text-slate-500 line-clamp-1 mb-2" title={p.deskripsi}>{p.deskripsi}</p>}
-
-                <div className="flex flex-wrap items-center gap-1 mt-auto pb-2.5 border-b border-slate-50">
-                  <span className="text-[10px] font-semibold text-slate-400 relative top-px">Est.</span>
-                  <p className="font-black text-indigo-600 text-sm sm:text-[15px]">{formatRupiah(p.harga_jual)}</p>
-                </div>
-
-                <div className="flex flex-col gap-2 pt-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-none flex bg-slate-50 border border-slate-200 rounded-lg h-[34px] overflow-hidden shadow-sm">
-                      <button
-                        onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, (prev[p.id] || 1) - 1) }))}
-                        className="w-8 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold"
-                      >-</button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={cardQtys[p.id] || 1}
-                        onChange={(e) => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                        className="w-8 flex-none bg-transparent text-center font-bold text-slate-700 border-x border-slate-200 focus:outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <button
-                        onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: (prev[p.id] || 1) + 1 }))}
-                        className="w-8 flex-none flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold"
-                      >+</button>
-                    </div>
-
-                    <div className="flex-1 flex gap-1.5 h-[34px]">
-                      <button onClick={() => addToCart(p)} className="flex-1 bg-slate-900 hover:bg-indigo-600 text-white rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm" title="Tambah ke Keranjang">
-                        <ShoppingCart size={14} />
-                      </button>
-
-                      {/(kaos|baju|pakaian)/i.test(p.nama + ' ' + (p.kategori || '')) && (
-                        <button onClick={() => setEditingProduct(p)} className="flex-1 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm" title="Desain Kustom">
-                          <ImageIcon size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {editingProduct && (
-        <CustomEditor product={editingProduct} onClose={() => setEditingProduct(null)} onAddToCart={addToCart} />
-      )}
-
-    </div>
+      </div>
+    </>
   );
 };
 

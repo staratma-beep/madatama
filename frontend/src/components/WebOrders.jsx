@@ -27,8 +27,15 @@ export const WebOrders = ({ onNavigate }) => {
     const allNotifs = [...pendingOrders, ...pendingPayments].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     const notificationCount = allNotifs.length;
 
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleNavigate = () => {
+        setIsOpen(false);
+        if (onNavigate) onNavigate();
+    };
+
     return (
-        <DropdownMenu onOpenChange={(open) => { if (open) refreshOrders() }}>
+        <DropdownMenu open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (open) refreshOrders() }}>
             <DropdownMenuTrigger asChild>
                 <button
                     className="relative grid h-9 w-9 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-indigo-600 place-items-center rounded-xl transition-all shadow-sm outline-none"
@@ -43,7 +50,7 @@ export const WebOrders = ({ onNavigate }) => {
                 </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 max-h-[80vh] overflow-hidden flex flex-col bg-white border border-slate-100 shadow-xl rounded-2xl">
+            <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 max-h-[80vh] overflow-hidden flex flex-col bg-white border border-slate-100 shadow-xl rounded-2xl animate-in zoom-in-95">
                 <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-bold text-sm text-slate-700">Notifikasi Baru Diterima</h3>
                 </div>
@@ -51,47 +58,50 @@ export const WebOrders = ({ onNavigate }) => {
                 <div className="overflow-y-auto max-h-[60vh]">
                     {allNotifs.length > 0 ? (
                         allNotifs.map(n => (
-                            <div
+                            <DropdownMenuItem
                                 key={`${n.notifType}-${n.id}`}
-                                className="flex gap-4 p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors"
-                                onClick={() => { if (onNavigate) onNavigate(); }}
+                                className="flex gap-3 py-2.5 px-4 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer transition-colors focus:bg-slate-50 outline-none rounded-none"
+                                onClick={handleNavigate}
                             >
-                                <div className="shrink-0 mt-1">
+                                <div className="shrink-0 mt-0.5">
                                     {n.notifType === 'order' ? (
-                                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center"><ShoppingCart size={18} /></div>
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-inner"><ShoppingCart size={15} /></div>
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><Receipt size={18} /></div>
+                                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-inner"><Receipt size={15} /></div>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-sm text-slate-800 leading-tight mb-1 truncate">
+                                    <h4 className="font-bold text-sm text-slate-800 leading-tight truncate">
                                         {n.notifType === 'order' ? 'Pesanan Baru Masuk' : 'Konfirmasi Pembayaran'}
                                     </h4>
-                                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                                    <p className="text-[11px] text-slate-500 line-clamp-1 leading-snug mt-0.5">
                                         {n.notifType === 'order'
-                                            ? `Pesanan baru dari ${n.nama} senilai ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n.total || 0)}. Menunggu persetujuan.`
-                                            : `${n.nama} telah mengunggah bukti pembayaran via ${n.payment_method || 'transfer'}.`
+                                            ? `Dari ${n.nama} senilai ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n.total || 0)}.`
+                                            : `${n.nama} mengirim konfirmasi via ${n.payment_method || 'transfer'}.`
                                         }
                                     </p>
-                                    <span className="flex items-center gap-1 text-[10px] text-slate-400 mt-2 font-medium"><Clock size={10} /> {new Date(n.created_at).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span>
+                                    <span className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 font-bold"><Clock size={10} /> {new Date(n.created_at).toLocaleString("id-ID", { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span>
                                 </div>
-                            </div>
+                            </DropdownMenuItem>
                         ))
                     ) : (
                         <div className="p-8 text-center text-slate-500">
                             <Bell className="mx-auto mb-2 text-slate-300" size={32} />
-                            <p className="text-sm">Tidak ada notifikasi baru</p>
+                            <p className="text-sm font-semibold">Semua bersih!</p>
+                            <p className="text-[11px]">Tidak ada notifikasi baru</p>
                         </div>
                     )}
                 </div>
 
                 <div className="p-2 bg-slate-50/80 border-t border-slate-100">
-                    <button
-                        className="w-full py-2.5 text-sm font-bold text-indigo-600 hover:bg-white hover:text-indigo-700 bg-transparent rounded-xl border border-transparent transition-all"
-                        onClick={() => { if (onNavigate) onNavigate(); }}
-                    >
-                        Tampilkan Semua Pesanan
-                    </button>
+                    <DropdownMenuItem asChild>
+                        <button
+                            className="w-full py-2.5 text-sm font-bold text-indigo-600 hover:bg-white hover:text-indigo-800 bg-transparent rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-200 outline-none cursor-pointer"
+                            onClick={handleNavigate}
+                        >
+                            Tampilkan Semua Pesanan
+                        </button>
+                    </DropdownMenuItem>
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>

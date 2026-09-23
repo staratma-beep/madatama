@@ -132,18 +132,18 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
             </div>
 
             {/* SCROLLABLE TABLE SECTION */}
-            <div className="flex-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm flex flex-col min-h-0">
+            <div className="flex-1 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col min-h-0">
                 <div className="flex-1 overflow-auto">
                     <table className="w-full text-left text-sm relative">
-                        <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur shadow-sm border-b border-slate-200">
+                        <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200 text-slate-500 text-[11px] font-extrabold uppercase tracking-widest">
                             <tr>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Tanggal & No. Nota</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-widest text-slate-400">Produk & Detail Pembeli</th>
-                                <th className="px-5 py-3.5 text-right w-40 text-xs font-bold uppercase tracking-widest text-slate-400">Tagihan</th>
-                                <th className="px-5 py-3.5 text-center text-xs font-bold uppercase tracking-widest text-slate-400">Cetak & Aksi</th>
+                                <th className="px-5 py-4">Tanggal & No. Nota</th>
+                                <th className="px-5 py-4">Produk & Detail Pembeli</th>
+                                <th className="px-5 py-4 text-right w-40">Tagihan</th>
+                                <th className="px-5 py-4 text-center">Cetak & Aksi</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100 text-sm">
                             {filteredSales.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-5 py-24 text-center">
@@ -158,7 +158,7 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
                                 </tr>
                             ) : (
                                 filteredSales.map((s) => (
-                                    <tr key={s.id} className="group hover:bg-indigo-50/40 transition-colors">
+                                    <tr key={s.id} className="group hover:bg-indigo-50/20 hover:shadow-[inset_4px_0_0_0_rgba(99,102,241,1)] transition-all duration-200 bg-white">
                                         <td className="px-5 py-4 align-top w-48">
                                             <p className="font-semibold text-slate-800">{formatTanggal(s.tanggal)}</p>
                                             <span className="inline-block mt-1.5 font-mono font-bold text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded tracking-wider">{s.nota_no}</span>
@@ -187,18 +187,18 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
                                             <p className="font-mono-num text-lg font-bold text-emerald-600 bg-emerald-50 inline-block px-2 py-1 rounded-md mb-1">{formatRupiah(s.total)}</p>
                                             {(s.laba > 0) && <p className="text-[10px] text-indigo-500 font-bold font-mono-num tracking-wide mt-1 uppercase">Laba: {formatRupiah(s.laba)}</p>}
                                         </td>
-                                        <td className="px-5 py-4 align-top">
+                                        <td className="px-6 py-4 align-top text-center">
                                             <div className="flex flex-wrap items-center justify-center gap-1.5">
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 hover:bg-slate-100 hover:text-slate-700 text-slate-500 font-semibold" onClick={() => downloadNota(s, profile)} title="Download Thermal 58mm">
+                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-500 hover:text-slate-700 font-bold transition-all shadow-sm" onClick={() => downloadNota(s, profile)} title="Download Thermal 58mm">
                                                     <FileText size={14} /> Nota
                                                 </Button>
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 hover:bg-indigo-100 hover:text-indigo-700 text-indigo-500 font-semibold" onClick={() => downloadInvoice(s, profile)} title="Download Invoice A4/PDF">
+                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-white border border-slate-200 hover:bg-indigo-100 hover:border-indigo-300 text-indigo-500 hover:text-indigo-700 font-bold transition-all shadow-sm" onClick={() => downloadInvoice(s, profile)} title="Download Invoice A4/PDF">
                                                     <FileSpreadsheet size={14} /> Invoice
                                                 </Button>
-                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 hover:bg-slate-100 hover:text-slate-700 text-slate-500 font-semibold" onClick={() => downloadSuratJalan(s, profile)} title="Download Surat Jalan Delivery">
+                                                <Button size="sm" variant="ghost" className="h-8 gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-500 hover:text-slate-700 font-bold transition-all shadow-sm" onClick={() => downloadSuratJalan(s, profile)} title="Download Surat Jalan Delivery">
                                                     <Truck size={14} /> Jalan
                                                 </Button>
-                                                <button onClick={() => setNotaDel(s)} className="grid h-8 w-8 place-items-center rounded-md hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors ml-1" title="Hapus">
+                                                <button onClick={() => setNotaDel(s)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent hover:border-rose-300 hover:bg-rose-500 text-slate-400 hover:text-white transition-all shadow-sm ml-1" title="Hapus">
                                                     <Trash2 size={15} />
                                                 </button>
                                             </div>

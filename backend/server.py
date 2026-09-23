@@ -112,11 +112,13 @@ class ProfitShareCreate(BaseModel):
 class Settings(BaseModel):
     saldo_awal: float = 0
     nama_usaha: str = "Bukuku Pro"
+    tagline_usaha: str = "Official System"
     alamat: str = ""
     telepon: str = ""
     logo: str = ""
     favicon: str = ""
     app_theme: str = "indigo"
+    dark_mode: bool = False
     sidebar_config: Optional[list] = None
     tab_names: Optional[dict] = None
     role_permissions: Optional[dict] = None
