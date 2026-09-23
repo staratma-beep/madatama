@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet, FileSpreadsheet, Truck, Search, Globe, Image, Calculator } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Trophy, Download, ReceiptText, Percent, FileText, PackagePlus, CheckCircle2, Wallet, FileSpreadsheet, Truck, Search, Globe, Image, Calculator, TrendingUp } from "lucide-react";
 
 const KATEGORI = ["Branding", "Printing", "Advertising"];
 
@@ -426,20 +426,35 @@ export const HPPKalkulator = ({ onSold, cashBalance = 0 }) => {
       {/* KPI Cards Bulan Ini */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <p className="text-[12px] font-medium text-slate-500 mb-1">Omzet {monthLabel(curMonth).split(" ")[0]}</p>
-          <p className="font-mono-num text-2xl font-bold text-slate-900">{formatRupiah(totalOmzet)}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[12px] font-medium text-slate-500">Omzet {monthLabel(curMonth).split(" ")[0]}</p>
+            <div className="grid h-7 w-7 place-items-center rounded bg-indigo-50 text-indigo-600">
+              <TrendingUp size={14} />
+            </div>
+          </div>
+          <p className="font-mono-num text-[22px] font-bold text-slate-900 tracking-tight leading-tight">{formatRupiah(totalOmzet)}</p>
           <p className="mt-1 text-[11px] text-slate-500">{totalQty} unit terjual</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <p className="text-[12px] font-medium text-slate-500 mb-1">Laba Produk</p>
-          <p className="font-mono-num text-2xl font-bold text-slate-900">{formatRupiah(totalLabaProduk)}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[12px] font-medium text-slate-500">Laba Produk</p>
+            <div className="grid h-7 w-7 place-items-center rounded bg-emerald-50 text-emerald-600">
+              <Wallet size={14} />
+            </div>
+          </div>
+          <p className="font-mono-num text-[22px] font-bold text-slate-900 tracking-tight leading-tight">{formatRupiah(totalLabaProduk)}</p>
           <p className="mt-1 text-[11px] text-slate-500">
             {totalOmzet > 0 ? `Margin ${((totalLabaProduk / totalOmzet) * 100).toFixed(1)}%` : "Belum ada nota"}
           </p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <p className="text-[12px] font-medium text-slate-500 mb-1">Jumlah Nota</p>
-          <p className="font-mono-num text-2xl font-bold text-slate-900">{monthSales.length}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[12px] font-medium text-slate-500">Jumlah Nota</p>
+            <div className="grid h-7 w-7 place-items-center rounded bg-amber-50 text-amber-600">
+              <ReceiptText size={14} />
+            </div>
+          </div>
+          <p className="font-mono-num text-[22px] font-bold text-slate-900 tracking-tight leading-tight">{monthSales.length}</p>
           <p className="mt-1 text-[11px] text-slate-500">{aggList.length} produk berbeda</p>
         </div>
       </div>

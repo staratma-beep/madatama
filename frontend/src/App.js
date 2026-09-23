@@ -21,7 +21,7 @@ import { WebSettingsTab } from "@/components/WebSettingsTab";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemeSettingsTab } from "@/components/ThemeSettingsTab";
 import { RiwayatNota } from "@/components/RiwayatNota";
-import { THEME_COLORS } from "@/lib/theme";
+import { THEME_COLORS, applyAppTheme } from "@/lib/theme";
 import { Toaster, toast } from "sonner";
 import {
   LogOut, LayoutDashboard, BookText, Calculator, PieChart, HandCoins, Package, Coins,
@@ -97,7 +97,11 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark-theme');
     }
-  }, [settings.nama_usaha, settings.favicon, settings.dark_mode]);
+
+    if (settings.app_theme) {
+      applyAppTheme(settings.app_theme);
+    }
+  }, [settings.nama_usaha, settings.favicon, settings.dark_mode, settings.app_theme]);
 
   const cashBalance = useMemo(() => computeCashBalance(transactions, saldoAwal), [transactions, saldoAwal]);
   const curMonth = monthKey(todayISO());

@@ -64,7 +64,7 @@ const KpiCard = ({ label, value, prev, format = "rupiah", icon: Icon, color = "s
         <div className={`mt-1.5 flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-500" : "text-slate-400"
           }`}>
           {delta > 0 ? <ArrowUpRight size={12} /> : delta < 0 ? <ArrowDownRight size={12} /> : <Minus size={12} />}
-          <span>{pct != null ? `${Math.abs(pct)}%` : "—"} vs bulan lalu</span>
+          <span>{pct != null ? `${Math.abs(pct)}%` : "—"} vs sebelumnya</span>
         </div>
       )}
     </div>
@@ -95,9 +95,28 @@ export const RekapBulanan = ({ transactions }) => {
     [rows]
   );
 
-  // KPI: bulan terbaru vs sebelumnya
-  const cur = rows[0];
-  const prev = rows[1];
+  // Menghitung total untuk periode yang dipilih
+  const totals = useMemo(() => {
+    let pemasukan = 0, pengeluaran = 0, laba = 0;
+    rows.forEach(r => { pemasukan += r.pemasukan; pengeluaran += r.pengeluaran; laba += r.laba; });
+    const margin = pemasukan > 0 ? (laba / pemasukan) * 100 : 0;
+    return { pemasukan, pengeluaran, laba, margin };
+  }, [rows]);
+
+  // Menghitung total periode sebelumnya (untuk indikator naik/turun)
+  const prevTotals = useMemo(() => {
+    if (range === "all") return null;
+    const size = Number(range);
+    const prevSlice = allRows.slice(size, size + size);
+    if (prevSlice.length === 0) return null; // Tidak ada data lama untuk dibandingkan
+
+    let pemasukan = 0, pengeluaran = 0, laba = 0;
+    prevSlice.forEach(r => { pemasukan += r.pemasukan; pengeluaran += r.pengeluaran; laba += r.laba; });
+    const margin = pemasukan > 0 ? (laba / pemasukan) * 100 : 0;
+    return { pemasukan, pengeluaran, laba, margin };
+  }, [allRows, range]);
+
+  const rangeLabel = range === "all" ? "Keseluruhan" : `${range} Bulan`;
 
   // Kumpulkan semua nama biaya tetap unik yang pernah muncul
   const allBiayaNames = useMemo(() => {
@@ -136,12 +155,12 @@ export const RekapBulanan = ({ transactions }) => {
       </div>
 
       {/* KPI Cards */}
-      {cur && (
+      {rows.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard label="Pemasukan Bulan Ini" value={cur.pemasukan} prev={prev?.pemasukan} color="emerald" icon={TrendingUp} />
-          <KpiCard label="Pengeluaran Bulan Ini" value={cur.pengeluaran} prev={prev?.pengeluaran} color="red" icon={TrendingDown} />
-          <KpiCard label="Laba Bersih" value={cur.laba} prev={prev?.laba} color="indigo" icon={TrendingUp} />
-          <KpiCard label="Margin Operasional" value={cur.margin} prev={prev?.margin} format="pct" color="amber" icon={ArrowUpRight} />
+          <KpiCard label={`Pemasukan ${rangeLabel}`} value={totals.pemasukan} prev={prevTotals?.pemasukan} color="emerald" icon={TrendingUp} />
+          <KpiCard label={`Pengeluaran ${rangeLabel}`} value={totals.pengeluaran} prev={prevTotals?.pengeluaran} color="red" icon={TrendingDown} />
+          <KpiCard label={`Laba Bersih ${rangeLabel}`} value={totals.laba} prev={prevTotals?.laba} color="indigo" icon={TrendingUp} />
+          <KpiCard label={`Margin ${rangeLabel}`} value={totals.margin} prev={prevTotals?.margin} format="pct" color="amber" icon={ArrowUpRight} />
         </div>
       )}
 
@@ -156,11 +175,13 @@ export const RekapBulanan = ({ transactions }) => {
             <div className="flex rounded-md border border-slate-200 overflow-hidden text-[12px] font-semibold">
               <button
                 onClick={() => setChartMode("bar")}
-                className={`px-3 py-1.5 transition-colors ${chartMode === "bar" ? "bg-indigo-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 transition-colors ${chartMode === "bar" ? "text-white shadow-sm" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                style={chartMode === "bar" ? { backgroundColor: 'var(--theme-600, #4f46e5)' } : {}}
               >Batang</button>
               <button
                 onClick={() => setChartMode("line")}
-                className={`px-3 py-1.5 transition-colors ${chartMode === "line" ? "bg-indigo-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                className={`px-3 py-1.5 transition-colors ${chartMode === "line" ? "text-white shadow-sm" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                style={chartMode === "line" ? { backgroundColor: 'var(--theme-600, #4f46e5)' } : {}}
               >Garis</button>
             </div>
           </div>
@@ -171,7 +192,8 @@ export const RekapBulanan = ({ transactions }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} width={42} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(99,102,241,0.04)" }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--theme-50, #f8fafc)" }} />
+
                 <Bar dataKey="pemasukan" name="Pemasukan" radius={[4, 4, 0, 0]} fill="#10b981" opacity={0.85} />
                 <Bar dataKey="pengeluaran" name="Pengeluaran" radius={[4, 4, 0, 0]} fill="#f87171" opacity={0.85} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
@@ -184,7 +206,7 @@ export const RekapBulanan = ({ transactions }) => {
                 <Tooltip content={<ChartTooltip />} />
                 <Line type="monotone" dataKey="pemasukan" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} name="Pemasukan" />
                 <Line type="monotone" dataKey="pengeluaran" stroke="#f87171" strokeWidth={2} dot={{ r: 3, fill: "#f87171" }} name="Pengeluaran" />
-                <Line type="monotone" dataKey="laba" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: "#6366f1" }} name="Laba/Rugi" />
+                <Line type="monotone" dataKey="laba" stroke="var(--theme-600, #4f46e5)" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: "var(--theme-600, #4f46e5)", strokeWidth: 0 }} name="Laba/Rugi" />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
               </LineChart>
             )}

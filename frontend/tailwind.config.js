@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    darkMode: ["class"],
-    content: [
+  darkMode: ["class"],
+  content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
   ],
@@ -18,6 +18,18 @@ module.exports = {
         sm: 'calc(var(--radius) - 4px)'
       },
       colors: {
+        indigo: {
+          50: 'var(--theme-50, #eef2ff)',
+          100: 'var(--theme-100, #e0e7ff)',
+          200: 'var(--theme-200, #c7d2fe)',
+          300: 'var(--theme-300, #a5b4fc)',
+          400: 'var(--theme-400, #818cf8)',
+          500: 'var(--theme-500, #6366f1)',
+          600: 'var(--theme-600, #4f46e5)',
+          700: 'var(--theme-700, #4338ca)',
+          800: 'var(--theme-800, #3730a3)',
+          900: 'var(--theme-900, #312e81)'
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

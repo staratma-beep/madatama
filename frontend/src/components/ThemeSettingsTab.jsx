@@ -43,6 +43,20 @@ const DEFAULT_GROUPS = [
     { title: "Laporan & Histori", keys: ["riwayat-nota", "rekap", "labarugi", "log"] }
 ];
 
+const THEME_STYLES = {
+    slate: { border: "border-slate-500", bg: "bg-slate-50", ring: "ring-slate-100", text: "text-slate-700", primary: "bg-slate-600" },
+    rose: { border: "border-rose-500", bg: "bg-rose-50", ring: "ring-rose-100", text: "text-rose-700", primary: "bg-rose-600" },
+    orange: { border: "border-orange-500", bg: "bg-orange-50", ring: "ring-orange-100", text: "text-orange-700", primary: "bg-orange-600" },
+    amber: { border: "border-amber-500", bg: "bg-amber-50", ring: "ring-amber-100", text: "text-amber-700", primary: "bg-amber-600" },
+    emerald: { border: "border-emerald-500", bg: "bg-emerald-50", ring: "ring-emerald-100", text: "text-emerald-700", primary: "bg-emerald-600" },
+    teal: { border: "border-teal-500", bg: "bg-teal-50", ring: "ring-teal-100", text: "text-teal-700", primary: "bg-teal-600" },
+    cyan: { border: "border-cyan-500", bg: "bg-cyan-50", ring: "ring-cyan-100", text: "text-cyan-700", primary: "bg-cyan-600" },
+    blue: { border: "border-blue-500", bg: "bg-blue-50", ring: "ring-blue-100", text: "text-blue-700", primary: "bg-blue-600" },
+    indigo: { border: "border-indigo-500", bg: "bg-indigo-50", ring: "ring-indigo-100", text: "text-indigo-700", primary: "bg-indigo-600" },
+    purple: { border: "border-purple-500", bg: "bg-purple-50", ring: "ring-purple-100", text: "text-purple-700", primary: "bg-purple-600" },
+    fuchsia: { border: "border-fuchsia-500", bg: "bg-fuchsia-50", ring: "ring-fuchsia-100", text: "text-fuchsia-700", primary: "bg-fuchsia-600" },
+};
+
 export const ThemeSettingsTab = () => {
     const [settings, setSettings] = useState(null);
     const [theme, setTheme] = useState("indigo");
@@ -199,7 +213,7 @@ export const ThemeSettingsTab = () => {
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">Atur profil usaha, tampilan, dan navigasi sidebar untuk menyempurnakan pengalaman Anda.</p>
                 </div>
-                <button onClick={handleSave} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md shrink-0">
+                <button onClick={handleSave} className={`flex gap-2 items-center text-white px-5 py-2 rounded-md font-semibold transition-all shrink-0 h-auto ${THEME_STYLES[theme]?.primary || 'bg-indigo-600'} hover:opacity-90`}>
                     <Save size={18} /> Simpan Perubahan
                 </button>
             </div>
@@ -238,7 +252,7 @@ export const ThemeSettingsTab = () => {
 
                                 <div className="space-y-3">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Icon Web (Favicon)</Label>
-                                    <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-100">
                                         <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
                                             {cfg.favicon ? <img src={cfg.favicon} alt="favicon" className="h-full w-full object-contain" /> : <ImageIcon size={20} className="text-slate-300" />}
                                         </div>
@@ -270,7 +284,7 @@ export const ThemeSettingsTab = () => {
                                     <Label className="font-semibold text-slate-700">Nomor Telepon / WhatsApp</Label>
                                     <Input value={cfg.telepon} onChange={(e) => setCfg({ ...cfg, telepon: e.target.value })} placeholder="Cth: 0812-3456-7890" className="h-10 border-slate-200 focus-visible:ring-indigo-500" />
                                 </div>
-                                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mt-2">
+                                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100 mt-2">
                                     <Label className="text-emerald-800 font-bold flex items-center gap-1.5 mb-1"><Database size={16} /> Saldo Kas Awal / Modal Dasar</Label>
                                     <p className="text-xs text-emerald-600 mb-3 opacity-90">Tentukan nilai saldo untuk pembukuan pertama kali.</p>
                                     <div className="relative">
@@ -288,34 +302,38 @@ export const ThemeSettingsTab = () => {
                             <Palette size={18} className="text-slate-400" /> Warna Tema Aplikasi
                         </h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                            {THEMES.map(t => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => setTheme(t.id)}
-                                    className={`flex flex-col items-center justify-center p-3 px-1 rounded-xl border-2 transition-all ${theme === t.id ? `border-${t.id}-500 bg-${t.id}-50 ring-4 ring-${t.id}-100 shadow-sm transform scale-[1.02]` : 'border-slate-100 hover:border-slate-300 bg-white hover:bg-slate-50'}`}
-                                >
-                                    <div className={`w-10 h-10 rounded-full ${t.color} mb-3 shadow-md ${theme === t.id ? 'ring-2 ring-offset-2 ring-white scale-110' : ''}`} />
-                                    <span className={`text-[10px] font-bold text-center leading-tight ${theme === t.id ? `text-${t.id}-700` : 'text-slate-500'}`}>{t.label}</span>
-                                </button>
-                            ))}
+                            {THEMES.map(t => {
+                                const isActive = theme === t.id;
+                                const s = THEME_STYLES[t.id];
+                                return (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setTheme(t.id)}
+                                        className={`flex flex-col items-center justify-center p-3 px-1 rounded-lg border-2 transition-all ${isActive ? `${s.border} ${s.bg} ring-4 ${s.ring} shadow-sm transform scale-[1.02]` : 'border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50'}`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-full ${t.color} mb-3 shadow-sm ${isActive ? 'ring-2 ring-offset-2 ring-white scale-110' : ''}`} />
+                                        <span className={`text-[10px] font-bold text-center leading-tight ${isActive ? s.text : 'text-slate-500'}`}>{t.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         {/* Toggle Mode Gelap */}
                         <div className="mt-8 border-t border-slate-100 pt-6">
                             <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2">Pilih Nuansa Dashboard</h4>
-                            <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all">
+                            <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition-all">
                                 <input
                                     type="checkbox"
                                     className="hidden"
                                     checked={darkMode}
                                     onChange={(e) => setDarkMode(e.target.checked)}
                                 />
-                                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${darkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                <div className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${darkMode ? (THEME_STYLES[theme]?.primary || 'bg-slate-800') : 'bg-slate-300'}`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-300 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-slate-700 group-hover:text-slate-900 transition-colors text-sm">Mode Gelap (Dark Mode)</span>
-                                    <span className="text-xs text-slate-500">Tampilan redup untuk kenyamanan mata & nuansa futuristik (berlaku di semua web admin ini).</span>
+                                    <span className="font-semibold text-slate-700 group-hover:text-slate-900 transition-colors text-[13px]">Mode Gelap (Dark Mode)</span>
+                                    <span className="text-[11px] text-slate-500 font-medium">Tampilan redup untuk kenyamanan mata & nuansa futuristik (berlaku di semua web admin ini).</span>
                                 </div>
                             </label>
                         </div>
@@ -389,7 +407,7 @@ export const ThemeSettingsTab = () => {
                                 const unselectedTabs = AVAILABLE_TABS.filter(t => !g.keys.includes(t.key));
 
                                 return (
-                                    <div key={gIdx} className="border border-slate-200 rounded-xl bg-slate-50/70 p-4 relative group transition-all hover:bg-slate-50 hover:shadow-md hover:border-slate-300">
+                                    <div key={gIdx} className="border border-slate-200 rounded-lg bg-slate-50 p-4 relative group transition-all hover:bg-white hover:shadow-sm hover:border-slate-300">
                                         {/* Header Group */}
                                         <div className="flex justify-between items-start xl:items-center mb-4 gap-3 flex-col xl:flex-row">
                                             <input
