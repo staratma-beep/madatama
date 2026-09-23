@@ -15,8 +15,8 @@ const ChartTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-sm space-y-1 min-w-[180px]">
-      <p className="font-bold text-slate-800">{monthLabel(d.bulan)}</p>
+    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-lg text-[13px] space-y-1 min-w-[180px]">
+      <p className="font-semibold text-slate-800 pb-1 border-b border-slate-100">{monthLabel(d.bulan)}</p>
       <div className="flex justify-between gap-4">
         <span className="text-slate-500">Pemasukan</span>
         <span className="font-mono-num text-emerald-600 font-semibold">{formatRupiah(d.pemasukan)}</span>
@@ -37,27 +37,34 @@ const ChartTooltip = ({ active, payload }) => {
   );
 };
 
-// ── KPI Mini Card ────────────────────────────────────────────────────────────
-const KpiCard = ({ label, value, prev, format = "rupiah", color = "indigo" }) => {
+const KpiCard = ({ label, value, prev, format = "rupiah", icon: Icon, color = "slate" }) => {
   const delta = prev != null ? value - prev : null;
   const pct = prev > 0 ? ((delta / prev) * 100).toFixed(1) : null;
   const up = delta > 0;
-  const colors = {
-    emerald: "from-emerald-500 to-teal-600",
-    red: "from-red-500 to-rose-600",
-    indigo: "from-indigo-500 to-violet-600",
-    amber: "from-amber-400 to-orange-500",
+  const iconColors = {
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-500",
+    indigo: "bg-indigo-50 text-indigo-600",
+    amber: "bg-amber-50 text-amber-600",
   };
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${colors[color]} p-4 text-white shadow-md`}>
-      <p className="text-xs font-semibold uppercase tracking-wider opacity-80">{label}</p>
-      <p className="mt-2 font-mono-num text-xl font-bold">
+    <div className="relative overflow-hidden rounded-lg bg-white border border-slate-200 p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[12px] font-medium text-slate-500">{label}</p>
+        {Icon && (
+          <div className={`grid h-7 w-7 place-items-center rounded ${iconColors[color] || iconColors.slate}`}>
+            <Icon size={14} />
+          </div>
+        )}
+      </div>
+      <p className="font-mono-num text-[20px] font-bold text-slate-900 tracking-tight leading-tight">
         {format === "rupiah" ? formatRupiah(value) : `${value.toFixed(1)}%`}
       </p>
       {delta !== null && (
-        <div className="mt-1.5 flex items-center gap-1 text-xs font-medium opacity-90">
-          {delta > 0 ? <ArrowUpRight size={13} /> : delta < 0 ? <ArrowDownRight size={13} /> : <Minus size={13} />}
-          <span>{pct != null ? `${Math.abs(pct)}%` : "-"} vs bln lalu</span>
+        <div className={`mt-1.5 flex items-center gap-1 text-[11px] font-medium ${delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-500" : "text-slate-400"
+          }`}>
+          {delta > 0 ? <ArrowUpRight size={12} /> : delta < 0 ? <ArrowDownRight size={12} /> : <Minus size={12} />}
+          <span>{pct != null ? `${Math.abs(pct)}%` : "—"} vs bulan lalu</span>
         </div>
       )}
     </div>
@@ -131,19 +138,22 @@ export const RekapBulanan = ({ transactions }) => {
       {/* KPI Cards */}
       {cur && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard label="Pemasukan" value={cur.pemasukan} prev={prev?.pemasukan} color="emerald" />
-          <KpiCard label="Pengeluaran" value={cur.pengeluaran} prev={prev?.pengeluaran} color="red" />
-          <KpiCard label="Laba Bersih" value={cur.laba} prev={prev?.laba} color="indigo" />
-          <KpiCard label="Margin" value={cur.margin} prev={prev?.margin} format="pct" color="amber" />
+          <KpiCard label="Pemasukan Bulan Ini" value={cur.pemasukan} prev={prev?.pemasukan} color="emerald" icon={TrendingUp} />
+          <KpiCard label="Pengeluaran Bulan Ini" value={cur.pengeluaran} prev={prev?.pengeluaran} color="red" icon={TrendingDown} />
+          <KpiCard label="Laba Bersih" value={cur.laba} prev={prev?.laba} color="indigo" icon={TrendingUp} />
+          <KpiCard label="Margin Operasional" value={cur.margin} prev={prev?.margin} format="pct" color="amber" icon={ArrowUpRight} />
         </div>
       )}
 
       {/* Grafik */}
       {chartData.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-4">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">Tren Keuangan</p>
-            <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-semibold">
+            <div>
+              <p className="text-[14px] font-semibold text-slate-800">Tren Keuangan</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Perbulan dalam periode terpilih</p>
+            </div>
+            <div className="flex rounded-md border border-slate-200 overflow-hidden text-[12px] font-semibold">
               <button
                 onClick={() => setChartMode("bar")}
                 className={`px-3 py-1.5 transition-colors ${chartMode === "bar" ? "bg-indigo-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
@@ -155,27 +165,27 @@ export const RekapBulanan = ({ transactions }) => {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer width="100%" height={240}>
             {chartMode === "bar" ? (
               <BarChart data={chartData} margin={{ top: 5, right: 8, left: 0, bottom: 0 }} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} width={42} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(99,102,241,0.05)" }} />
-                <Bar dataKey="pemasukan" name="Pemasukan" radius={[5, 5, 0, 0]} fill="#10b981" opacity={0.85} />
-                <Bar dataKey="pengeluaran" name="Pengeluaran" radius={[5, 5, 0, 0]} fill="#f87171" opacity={0.85} />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} width={42} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(99,102,241,0.04)" }} />
+                <Bar dataKey="pemasukan" name="Pemasukan" radius={[4, 4, 0, 0]} fill="#10b981" opacity={0.85} />
+                <Bar dataKey="pengeluaran" name="Pengeluaran" radius={[4, 4, 0, 0]} fill="#f87171" opacity={0.85} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
               </BarChart>
             ) : (
               <LineChart data={chartData} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} width={42} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} width={42} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="pemasukan" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4, fill: "#10b981" }} name="Pemasukan" />
-                <Line type="monotone" dataKey="pengeluaran" stroke="#f87171" strokeWidth={2.5} dot={{ r: 4, fill: "#f87171" }} name="Pengeluaran" />
-                <Line type="monotone" dataKey="laba" stroke="#6366f1" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 4, fill: "#6366f1" }} name="Laba/Rugi" />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+                <Line type="monotone" dataKey="pemasukan" stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: "#10b981" }} name="Pemasukan" />
+                <Line type="monotone" dataKey="pengeluaran" stroke="#f87171" strokeWidth={2} dot={{ r: 3, fill: "#f87171" }} name="Pengeluaran" />
+                <Line type="monotone" dataKey="laba" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: "#6366f1" }} name="Laba/Rugi" />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
               </LineChart>
             )}
           </ResponsiveContainer>

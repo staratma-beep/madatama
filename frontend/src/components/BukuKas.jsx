@@ -63,69 +63,70 @@ export const BukuKas = ({ transactions, saldoAwal, onAdd, onEdit, onDelete, cash
         </h2>
       </div>
       <FixedCostsBar fixedCosts={fixedCosts} onReload={onReload} />
-      {/* Header Banner */}
-      <div
-        className="relative overflow-hidden rounded-2xl p-5 text-white"
-        style={{ background: "linear-gradient(135deg, #4f46e5, #6d28d9)" }}
-      >
-        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
-        <div className="absolute right-8 bottom-0 h-24 w-24 rounded-full bg-white/5" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header Banner — Minimalist */}
+      <div className="rounded-lg border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Left: Saldo + ringkasan */}
+        <div className="flex items-start gap-4">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <Wallet size={18} />
+          </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-200">
-              {hasFilter ? "TOTAL (MASUK - KELUAR)" : "TOTAL SALDO KAS"}
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              {hasFilter ? "Total (Masuk − Keluar)" : "Total Saldo Kas"}
             </p>
-            <p className="font-mono-num text-3xl font-bold mt-1" data-testid="kas-total-saldo">
+            <p className="font-mono-num text-[26px] font-bold text-slate-900 leading-tight" data-testid="kas-total-saldo">
               {formatRupiah(hasFilter ? totalMasuk - totalKeluar : cashBalance)}
             </p>
-            <div className="flex gap-4 mt-3">
+            <div className="flex gap-4 mt-1.5">
               <div className="flex items-center gap-1.5">
-                <TrendingUp size={13} className="text-emerald-300" />
-                <span className="text-xs text-indigo-200">Masuk: <span className="font-semibold text-emerald-300">{formatRupiah(totalMasuk)}</span></span>
+                <TrendingUp size={12} className="text-emerald-500" />
+                <span className="text-[12px] text-slate-500">Masuk: <span className="font-semibold text-emerald-600">{formatRupiah(totalMasuk)}</span></span>
               </div>
               <div className="flex items-center gap-1.5">
-                <TrendingDown size={13} className="text-red-300" />
-                <span className="text-xs text-indigo-200">Keluar: <span className="font-semibold text-red-300">{formatRupiah(totalKeluar)}</span></span>
+                <TrendingDown size={12} className="text-red-400" />
+                <span className="text-[12px] text-slate-500">Keluar: <span className="font-semibold text-red-500">{formatRupiah(totalKeluar)}</span></span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60" />
-              <input
-                type="text"
-                placeholder="Cari keterangan..."
-                value={f.search}
-                onChange={(e) => setF({ ...f, search: e.target.value })}
-                className="pl-9 pr-4 py-2 bg-white/10 hover:bg-white/20 focus:bg-white/30 border border-white/20 text-white placeholder:text-white/60 rounded-lg text-sm outline-none transition-all w-64 shadow-sm"
-              />
-            </div>
-            {selected.length > 0 && (
-              <Button
-                variant="destructive"
-                onClick={() => setToDeleteMultiple(true)}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold shadow-md"
-              >
-                <Trash2 size={15} className="mr-1.5" /> Hapus ({selected.length})
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={() => setShowFilter((s) => !s)}
-              data-testid="toggle-filter-btn"
-              className={`bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm ${showFilter ? "ring-2 ring-white/50" : ""}`}
-            >
-              <Filter size={15} className="mr-1.5" /> Filter
-              {hasFilter && <span className="ml-1.5 grid h-4 w-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-white">!</span>}
-            </Button>
-            <Button
-              onClick={onAdd}
-              className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold shadow-md"
-              data-testid="add-transaction-btn"
-            >
-              <Plus size={15} className="mr-1.5" /> Tambah
-            </Button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative hidden md:block">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari keterangan..."
+              value={f.search}
+              onChange={(e) => setF({ ...f, search: e.target.value })}
+              className="pl-8 pr-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 placeholder:text-slate-400 rounded-md text-[13px] outline-none focus:ring-1 focus:ring-indigo-300 focus:border-indigo-300 transition-all w-56"
+            />
           </div>
+          {selected.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setToDeleteMultiple(true)}
+              className="h-8 px-3 text-[13px] bg-red-500 hover:bg-red-600 text-white font-semibold"
+            >
+              <Trash2 size={13} className="mr-1.5" /> Hapus ({selected.length})
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setShowFilter((s) => !s)}
+            data-testid="toggle-filter-btn"
+            className={`h-8 px-3 text-[13px] border-slate-200 text-slate-600 hover:bg-slate-50 ${showFilter ? "bg-slate-100 text-slate-800" : ""}`}
+          >
+            <Filter size={13} className="mr-1.5" /> Filter
+            {hasFilter && <span className="ml-1.5 grid h-4 w-4 place-items-center rounded-full bg-amber-400 text-[10px] font-bold text-white">!</span>}
+          </Button>
+          <Button
+            onClick={onAdd}
+            className="h-8 px-3 text-[13px] bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+            data-testid="add-transaction-btn"
+          >
+            <Plus size={13} className="mr-1.5" /> Tambah
+          </Button>
         </div>
       </div>
 

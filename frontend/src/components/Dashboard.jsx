@@ -1,7 +1,7 @@
 import React from "react";
 import { formatRupiah, monthLabel } from "../lib/format";
 import { Wallet, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, Boxes, AlertTriangle, PlusCircle, ShoppingCart, Calculator, BarChart3, LayoutDashboard } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const StatCard = ({ title, value, sub, icon: Icon, testId, delay = 0, gradient }) => {
   let colorTheme = "bg-slate-50 text-slate-500";
@@ -77,17 +77,29 @@ export const Dashboard = ({
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-xl">
-          <p className="font-bold text-slate-700 mb-1">{`Tanggal ${label} ${monthLabel(currentMonthKey)}`}</p>
+        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg">
+          <p className="font-semibold text-slate-700 mb-1.5 text-[12px] uppercase tracking-wide">{`${label} ${monthLabel(currentMonthKey)}`}</p>
           {payload.map((entry, index) => (
-            <p key={index} className="text-sm font-medium" style={{ color: entry.color }}>
-              {entry.name}: {formatRupiah(entry.value)}
-            </p>
+            <div key={index} className="flex items-center gap-2 text-[13px]">
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+              <span className="text-slate-500">{entry.name}:</span>
+              <span className="font-bold" style={{ color: entry.color }}>{formatRupiah(entry.value)}</span>
+            </div>
           ))}
         </div>
       );
     }
     return null;
+  };
+
+  const totalPemasukan = rawDailyData.reduce((s, d) => s + d.Pemasukan, 0);
+  const totalPengeluaran = rawDailyData.reduce((s, d) => s + d.Pengeluaran, 0);
+
+  const yTickFormatter = (value) => {
+    if (value === 0) return 'Rp0';
+    if (value >= 1_000_000) return `Rp${(value / 1_000_000).toFixed(1)}jt`;
+    if (value >= 1_000) return `Rp${(value / 1_000).toFixed(0)}rb`;
+    return `Rp${value}`;
   };
 
   return (
@@ -201,21 +213,47 @@ export const Dashboard = ({
       {/* Analytical Section (Chart + Recent Activity Side by Side) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Monthly Chart Section */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-5 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 text-[14px]">
-            Grafik Arus Kas Bulan Ini <span className="font-normal text-slate-500">({monthLabel(currentMonthKey)})</span>
-          </h3>
-          <div className="flex-1 w-full min-h-[250px]">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-5 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-[14px]">
+                <BarChart3 size={14} className="text-slate-400" />
+                Arus Kas <span className="font-normal text-slate-400 text-[13px]">— {monthLabel(currentMonthKey)}</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Pemasukan vs Pengeluaran per hari</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 border border-emerald-100 bg-emerald-50 rounded-md px-2.5 py-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="text-[11px] font-semibold text-emerald-700">{formatRupiah(totalPemasukan)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 border border-red-100 bg-red-50 rounded-md px-2.5 py-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>
+                <span className="text-[11px] font-semibold text-red-600">{formatRupiah(totalPengeluaran)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 w-full min-h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rawDailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={rawDailyData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradPemasukan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradPengeluaran" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 500 }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis tick={{ fontSize: 11, fill: "#64748b", fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={(value) => `Rp${(value / 1000).toLocaleString('id-ID')}k`} width={80} dx={-10} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="circle" />
-                <Bar dataKey="Pemasukan" fill="#10b981" radius={[2, 2, 0, 0]} maxBarSize={20} />
-                <Bar dataKey="Pengeluaran" fill="#ef4444" radius={[2, 2, 0, 0]} maxBarSize={20} />
-              </BarChart>
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 500 }} tickLine={false} axisLine={false} dy={6} />
+                <YAxis tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 500 }} tickLine={false} axisLine={false} tickFormatter={yTickFormatter} width={60} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
+                <Area type="monotone" dataKey="Pemasukan" stroke="#10b981" strokeWidth={2} fill="url(#gradPemasukan)" dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
+                <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" strokeWidth={2} fill="url(#gradPengeluaran)" dot={false} activeDot={{ r: 4, fill: '#ef4444' }} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -223,29 +261,49 @@ export const Dashboard = ({
         {/* Recent Activity List */}
         <div className="lg:col-span-1 bg-white border border-slate-200 rounded-lg p-5 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-[14px]">Ringkasan Aktivitas</h3>
-            <span className="text-[11px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-md">Terbaru</span>
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-[14px]">Aktivitas Terbaru</h3>
+            <span className="text-[11px] bg-slate-100 text-slate-500 font-medium px-2 py-0.5 rounded-md">{recentTransactions.slice(0, 6).length} transaksi</span>
           </div>
           {recentTransactions.length > 0 ? (
-            <div className="flex-1 flex flex-col gap-3">
+            <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto">
               {recentTransactions.slice(0, 6).map(trx => (
-                <div key={trx.id} className="flex justify-between items-start border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                <div key={trx.id} className="flex justify-between items-start border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
                   <div className="flex items-start gap-2.5">
-                    <div className={`mt-1 w-[6px] h-[6px] rounded-full shrink-0 ${trx.kategori === 'Pemasukan' ? 'bg-[#10b981]' : 'bg-[#ef4444]'}`} />
+                    <div className={`mt-1 grid place-items-center w-6 h-6 rounded shrink-0 ${trx.kategori === 'Pemasukan' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                      }`}>
+                      {trx.kategori === 'Pemasukan'
+                        ? <ArrowDownLeft size={12} />
+                        : <ArrowUpRight size={12} />}
+                    </div>
                     <div className="flex flex-col">
-                      <p className="font-medium text-[13px] text-slate-800 leading-snug">{trx.keterangan}</p>
-                      <span className="text-[11px] text-slate-500">{new Date(trx.created_at || trx.tanggal).toLocaleString("id-ID", { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                      <p className="font-medium text-[13px] text-slate-800 leading-snug line-clamp-1">{trx.keterangan}</p>
+                      <span className="text-[11px] text-slate-400">{new Date(trx.tanggal).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     </div>
                   </div>
-                  <span className={`font-mono-num font-semibold text-[13px] shrink-0 ${trx.kategori === 'Pemasukan' ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>
-                    {trx.kategori === 'Pemasukan' ? '+' : '-'}{formatRupiah(trx.nominal)}
+                  <span className={`font-mono-num font-semibold text-[13px] shrink-0 ml-2 ${trx.kategori === 'Pemasukan' ? 'text-emerald-600' : 'text-red-500'
+                    }`}>
+                    {trx.kategori === 'Pemasukan' ? '+' : '−'}{formatRupiah(trx.nominal)}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400 py-6">
+              <Wallet size={28} className="mb-2 text-slate-200" />
               <span className="text-[13px] font-medium">Buku Kas Kosong</span>
+              <span className="text-[11px] mt-0.5">Belum ada transaksi bulan ini</span>
+            </div>
+          )}
+          {recentTransactions.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-md px-3 py-2">
+                <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide">Masuk</p>
+                <p className="text-[13px] font-bold text-emerald-700 tabular-nums">{formatRupiah(totalPemasukan)}</p>
+              </div>
+              <div className="bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">Keluar</p>
+                <p className="text-[13px] font-bold text-red-600 tabular-nums">{formatRupiah(totalPengeluaran)}</p>
+              </div>
             </div>
           )}
         </div>

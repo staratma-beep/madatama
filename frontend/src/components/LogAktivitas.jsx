@@ -45,62 +45,54 @@ export const LogAktivitas = () => {
 
                 <div className="flex items-center gap-2">
                     <div className="relative w-full sm:w-64 flex-none">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <Input
                             placeholder="Cari log..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 bg-white border-slate-200 h-10 w-full rounded-xl transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                            className="pl-8 bg-slate-50 border-slate-200 h-9 text-[13px] w-full rounded-md focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
                         />
                     </div>
-                    <button onClick={loadLogs} className="bg-white border border-slate-200 text-slate-500 p-2.5 rounded-xl hover:bg-slate-50 transition-colors" title="Muat ulang">
-                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                    <button onClick={loadLogs} className="bg-white border border-slate-200 text-slate-500 p-2 rounded-md hover:bg-slate-50 transition-colors" title="Muat ulang">
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 py-4">
+            <div className="rounded-lg border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden">
                 {loading && logs.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400"><RefreshCw className="animate-spin mx-auto mb-2" /> Memuat data...</div>
+                    <div className="py-12 text-center text-slate-400 text-[13px]"><RefreshCw className="animate-spin mx-auto mb-2" size={20} /> Memuat data...</div>
                 ) : filtered.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 flex flex-col items-center">
-                        <Activity className="opacity-20 mb-3" size={40} />
+                    <div className="py-12 text-center text-slate-400 flex flex-col items-center text-[13px]">
+                        <Activity className="opacity-20 mb-3" size={36} />
                         Tidak ada jejak aktivitas ditemukan.
                     </div>
                 ) : (
-                    <div className="flow-root">
-                        <ul role="list" className="-mb-8">
-                            {filtered.map((log, logIdx) => {
-                                const date = new Date(log.created_at);
-                                const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                                return (
-                                    <li key={log.id}>
-                                        <div className="relative pb-8">
-                                            {logIdx !== filtered.length - 1 ? (
-                                                <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-100" aria-hidden="true" />
-                                            ) : null}
-                                            <div className="relative flex space-x-3">
-                                                <div>
-                                                    <span className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center ring-8 ring-white">
-                                                        <Activity className="h-4 w-4 text-indigo-500" aria-hidden="true" />
-                                                    </span>
-                                                </div>
-                                                <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-700">
-                                                            {log.action} <span className="font-normal text-slate-500">• {log.description}</span>
-                                                        </p>
-                                                    </div>
-                                                    <div className="whitespace-nowrap text-right text-xs text-slate-400 font-medium">
-                                                        <time dateTime={log.created_at}>{formatTanggal(log.created_at.split("T")[0])} - {time}</time>
-                                                    </div>
-                                                </div>
-                                            </div>
+                    <div>
+                        {filtered.map((log, logIdx) => {
+                            const date = new Date(log.created_at);
+                            const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            return (
+                                <div
+                                    key={log.id}
+                                    className={`flex items-start gap-3 px-4 py-3 text-[13px] hover:bg-slate-50 transition-colors ${logIdx !== filtered.length - 1 ? 'border-b border-slate-100' : ''}`}
+                                >
+                                    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-500 mt-0.5">
+                                        <Activity size={13} />
+                                    </div>
+                                    <div className="flex min-w-0 flex-1 justify-between gap-4">
+                                        <p className="text-slate-700 font-medium leading-snug">
+                                            <span className="font-semibold text-slate-800">{log.action}</span>
+                                            <span className="text-slate-400 mx-1">•</span>
+                                            <span className="text-slate-500">{log.description}</span>
+                                        </p>
+                                        <div className="whitespace-nowrap text-right text-[11px] text-slate-400 font-medium shrink-0">
+                                            <time dateTime={log.created_at}>{formatTanggal(log.created_at.split("T")[0])} · {time}</time>
                                         </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

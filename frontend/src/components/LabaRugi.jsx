@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "./ui/select";
-import { CheckCircle2, RotateCcw, Users, PiggyBank, ChevronDown, ChevronUp, PieChart } from "lucide-react";
+import { CheckCircle2, RotateCcw, Users, PiggyBank, ChevronDown, ChevronUp, PieChart, TrendingUp, TrendingDown } from "lucide-react";
 
 const Row = ({ label, value, className, sub }) => (
   <div className="flex flex-wrap items-center justify-between py-2.5 border-b border-slate-100/80 last:border-0 hover:bg-slate-50 px-3 -mx-3 rounded-lg transition-colors">
@@ -100,18 +100,18 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
 
       {/* Pengaturan Alokasi (collapsible) */}
       {!shared && d.laba > 0 && (
-        <div className="rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border border-indigo-200 bg-indigo-50/60 p-4">
+        <div className="rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] border border-slate-200 bg-white p-4">
           <button
-            className="flex w-full items-center justify-between text-sm font-bold text-indigo-700"
+            className="flex w-full items-center justify-between text-[13px] font-semibold text-slate-700 hover:text-slate-900 transition-colors"
             onClick={() => setShowSettings((s) => !s)}
           >
-            <span>⚙️ Pengaturan Alokasi Bagi Hasil</span>
-            {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <span className="flex items-center gap-2">⚙️ Pengaturan Alokasi Bagi Hasil</span>
+            {showSettings ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
           </button>
           {showSettings && (
-            <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+            <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Distribusi Laba</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Distribusi Laba</p>
                 <SliderRow
                   label="Laba yang Dibagikan"
                   value={distribusiPct}
@@ -120,33 +120,33 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
                   color="indigo"
                 />
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="rounded-lg bg-emerald-100 px-3 py-2 text-center shadow-inner">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Dibagi ({distribusiPct}%)</p>
-                    <p className="mt-0.5 tabular-nums tracking-tight font-bold text-sm text-emerald-900">{formatRupiah(labaDibagi)}</p>
+                  <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Dibagi ({distribusiPct}%)</p>
+                    <p className="mt-0.5 tabular-nums font-bold text-[13px] text-slate-800">{formatRupiah(labaDibagi)}</p>
                   </div>
-                  <div className="rounded-lg bg-blue-100 px-3 py-2 text-center shadow-inner">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Modal Kerja ({100 - distribusiPct}%)</p>
-                    <p className="mt-0.5 tabular-nums tracking-tight font-bold text-sm text-blue-900">{formatRupiah(labaDitahan)}</p>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Modal Kerja ({100 - distribusiPct}%)</p>
+                    <p className="mt-0.5 tabular-nums font-bold text-[13px] text-slate-800">{formatRupiah(labaDitahan)}</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Porsi Mitra</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Porsi Mitra</p>
                 <SliderRow
                   label={`Pemilik`}
                   value={pemilikPct}
                   onChange={handlePemilikChange}
                   min={10} max={90} step={5}
-                  color="violet"
+                  color="indigo"
                 />
                 <SliderRow
                   label={`Pengelola`}
                   value={pengelolaPct}
                   onChange={(v) => handlePemilikChange(100 - v)}
                   min={10} max={90} step={5}
-                  color="cyan"
+                  color="indigo"
                 />
-                <p className="text-xs text-slate-400 text-center">Geser salah satu, yang lain otomatis menyesuaikan</p>
+                <p className="text-[11px] text-slate-400 text-center">Geser salah satu, yang lain otomatis menyesuaikan</p>
               </div>
             </div>
           )}
@@ -191,34 +191,48 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
 
         {/* Kolom Kanan: Bagi Hasil */}
         <div className="flex flex-col gap-3">
-          {/* Banner Laba */}
-          <div className={`rounded-lg shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-5 text-white ${d.laba >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-red-500 to-red-700"}`} data-testid="profit-share-card">
-            <p className="text-sm font-semibold uppercase tracking-wider opacity-90">
-              {d.laba >= 0 ? "Laba Bersih" : "Rugi Bersih"} — {monthLabel(bulan)}
-            </p>
-            <p className="mt-2 text-[28px] font-bold tabular-nums tracking-tight drop-shadow-sm leading-none" data-testid="laba-bersih-value">{formatRupiah(d.laba)}</p>
-            <p className="mt-1.5 text-xs opacity-90 font-medium">Margin Operasional: {d.margin.toFixed(1)}%</p>
+          {/* Banner Laba - Minimalist */}
+          <div className={`rounded-lg border shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-4 ${d.laba >= 0
+            ? "bg-emerald-50 border-emerald-200"
+            : "bg-red-50 border-red-200"
+            }`} data-testid="profit-share-card">
+            <div className="flex items-start gap-3">
+              <div className={`grid h-10 w-10 place-items-center rounded-lg shrink-0 ${d.laba >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
+                }`}>
+                {d.laba >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[11px] font-semibold uppercase tracking-widest ${d.laba >= 0 ? "text-emerald-600" : "text-red-500"
+                  }`}>
+                  {d.laba >= 0 ? "Laba Bersih" : "Rugi Bersih"} — {monthLabel(bulan)}
+                </p>
+                <p className={`mt-1 text-[26px] font-bold tabular-nums leading-tight ${d.laba >= 0 ? "text-emerald-900" : "text-red-800"
+                  }`} data-testid="laba-bersih-value">{formatRupiah(d.laba)}</p>
+                <p className={`mt-0.5 text-[12px] font-medium ${d.laba >= 0 ? "text-emerald-700" : "text-red-600"
+                  }`}>Margin Operasional: {d.margin.toFixed(1)}%</p>
+              </div>
+            </div>
             {d.laba > 0 && !shared && (
-              <div className="mt-4 border-t border-white/20 pt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-0.5">Dibagikan ({distribusiPct}%)</p>
-                  <p className="tabular-nums tracking-tight font-bold">{formatRupiah(labaDibagi)}</p>
+              <div className="mt-3 pt-3 border-t border-emerald-200 grid grid-cols-2 gap-2">
+                <div className="bg-white border border-emerald-100 rounded-md px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">Dibagikan ({distribusiPct}%)</p>
+                  <p className="tabular-nums text-[13px] font-bold text-slate-800">{formatRupiah(labaDibagi)}</p>
                 </div>
-                <div>
-                  <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-0.5">Modal Kerja ({100 - distribusiPct}%)</p>
-                  <p className="tabular-nums tracking-tight font-bold">{formatRupiah(labaDitahan)}</p>
+                <div className="bg-white border border-slate-200 rounded-md px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Modal Kerja ({100 - distribusiPct}%)</p>
+                  <p className="tabular-nums text-[13px] font-bold text-slate-800">{formatRupiah(labaDitahan)}</p>
                 </div>
               </div>
             )}
             {d.laba > 0 && shared && (
-              <div className="mt-4 border-t border-white/20 pt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-0.5">Dibagikan ({shared.distribusi_pct ?? 100}%)</p>
-                  <p className="tabular-nums tracking-tight font-bold">{formatRupiah((shared.bagian_pemilik || 0) + (shared.bagian_pengelola || 0))}</p>
+              <div className="mt-3 pt-3 border-t border-emerald-200 grid grid-cols-2 gap-2">
+                <div className="bg-white border border-emerald-100 rounded-md px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">Dibagikan ({shared.distribusi_pct ?? 100}%)</p>
+                  <p className="tabular-nums text-[13px] font-bold text-slate-800">{formatRupiah((shared.bagian_pemilik || 0) + (shared.bagian_pengelola || 0))}</p>
                 </div>
-                <div>
-                  <p className="opacity-70 text-[11px] font-bold uppercase tracking-wider mb-0.5">Modal Kerja</p>
-                  <p className="tabular-nums tracking-tight font-bold">{formatRupiah(shared.laba_ditahan || 0)}</p>
+                <div className="bg-white border border-slate-200 rounded-md px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Modal Kerja</p>
+                  <p className="tabular-nums text-[13px] font-bold text-slate-800">{formatRupiah(shared.laba_ditahan || 0)}</p>
                 </div>
               </div>
             )}
@@ -241,19 +255,19 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-violet-50 border border-violet-100 p-4 text-center shadow-inner">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 mb-1">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Pemilik ({shared ? (shared.pemilik_pct ?? 50) : pemilikPct}%)
                 </p>
-                <p className="tabular-nums tracking-tight text-lg font-bold text-violet-900" data-testid="bagian-pemilik">
+                <p className="tabular-nums text-[16px] font-bold text-indigo-700" data-testid="bagian-pemilik">
                   {formatRupiah(shared ? shared.bagian_pemilik : bagianPemilik)}
                 </p>
               </div>
-              <div className="rounded-xl bg-cyan-50 border border-cyan-100 p-4 text-center shadow-inner">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-600 mb-1">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Pengelola ({shared ? (shared.pengelola_pct ?? 50) : pengelolaPct}%)
                 </p>
-                <p className="tabular-nums tracking-tight text-lg font-bold text-cyan-900" data-testid="bagian-pengelola">
+                <p className="tabular-nums text-[16px] font-bold text-indigo-700" data-testid="bagian-pengelola">
                   {formatRupiah(shared ? shared.bagian_pengelola : bagianPengelola)}
                 </p>
               </div>
@@ -322,26 +336,26 @@ export const LabaRugi = ({ transactions, sales = [], profitShares, onMarkShared,
 
       {/* Histori Bagi Hasil */}
       {profitShares.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">Histori Bagi Hasil</p>
+        <div className="rounded-lg border border-slate-200 bg-white shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] p-4">
+          <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-400">Histori Bagi Hasil</p>
           <div className="space-y-2">
             {[...profitShares].sort((a, b) => (a.bulan < b.bulan ? 1 : -1)).map((p) => (
-              <div key={p.bulan} className="flex flex-col gap-1.5 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 text-sm" data-testid={`share-history-${p.bulan}`}>
+              <div key={p.bulan} className="flex flex-col gap-1.5 rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 text-sm" data-testid={`share-history-${p.bulan}`}>
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-slate-700">{monthLabel(p.bulan)}</span>
                   <div className="flex items-center gap-2">
                     {p.distribusi_pct && (
                       <span className="text-xs text-slate-400">Distribusi {p.distribusi_pct}% · Porsi {p.pemilik_pct ?? 50}:{p.pengelola_pct ?? 50}</span>
                     )}
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">✓ Dibagi</span>
+                    <span className="rounded-md bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">✓ Dibagi</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500 tabular-nums tracking-tight font-medium">
                   <span>Laba Total: <span className="font-bold text-slate-700">{formatRupiah(p.laba_bersih)}</span></span>
-                  <span className="text-violet-700">Pemilik: <span className="font-bold">{formatRupiah(p.bagian_pemilik)}</span></span>
-                  <span className="text-cyan-700">Pengelola: <span className="font-bold">{formatRupiah(p.bagian_pengelola)}</span></span>
+                  <span className="text-indigo-600">Pemilik: <span className="font-bold">{formatRupiah(p.bagian_pemilik)}</span></span>
+                  <span className="text-indigo-500">Pengelola: <span className="font-bold">{formatRupiah(p.bagian_pengelola)}</span></span>
                   {(p.laba_ditahan > 0) && (
-                    <span className="flex items-center gap-1 text-blue-600">
+                    <span className="flex items-center gap-1 text-slate-500">
                       <PiggyBank size={11} /> Modal Kerja: <span className="font-bold">{formatRupiah(p.laba_ditahan)}</span>
                     </span>
                   )}

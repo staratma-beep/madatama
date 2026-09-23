@@ -204,7 +204,7 @@ const Catalog = ({ cart, setCart }) => {
 
   return (
     <>
-      <div className={`relative w-full ${settings.banner_url ? 'h-[35vh] min-h-[320px] bg-slate-900 border-none rounded-none overflow-hidden' : 'pt-24 pb-8 overflow-hidden ' + getGradientClass(settings.theme_gradient)}`}>
+      <div className={`relative w-full ${settings.banner_url ? 'h-[25vh] min-h-[240px] bg-slate-900 border-none rounded-none overflow-hidden' : 'pt-24 pb-8 overflow-hidden ' + getGradientClass(settings.theme_gradient)}`}>
         {settings.banner_url ? (
           <div className="absolute inset-0">
             <img
@@ -234,11 +234,11 @@ const Catalog = ({ cart, setCart }) => {
           <div className="absolute top-0 left-1/2 w-px h-full bg-white/40"></div>
         </div>
 
-        <div className="relative z-10 max-w-[1440px] w-full h-full mx-auto px-6 lg:px-16 flex flex-col justify-center pt-16 pb-4">
+        <div className="relative z-10 max-w-[1440px] w-full h-full mx-auto px-6 lg:px-16 flex flex-col justify-center pt-[72px] pb-4">
           <p className="text-white/80 font-bold tracking-[0.2em] text-[9px] sm:text-[11px] mb-2 uppercase drop-shadow-md">
             {settings.subtitle || "FEATURED COLLECTION"}
           </p>
-          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-black mb-5 tracking-tighter leading-[1.1] max-w-2xl whitespace-pre-wrap ${settings.banner_url ? 'text-white drop-shadow-2xl' : 'text-slate-900'}`}>
+          <h1 className={`text-xl sm:text-2xl md:text-4xl font-black mb-4 tracking-tighter leading-tight max-w-3xl whitespace-pre-wrap ${settings.banner_url ? 'text-white drop-shadow-2xl' : 'text-slate-900'}`}>
             {settings.title || "PUSHING\nBOUNDARIES"}
           </h1>
 
@@ -248,10 +248,10 @@ const Catalog = ({ cart, setCart }) => {
         </div>
       </div>
 
-      <div id="catalog" className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div id="catalog" className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
 
         {products.length > 0 && (
-          <div className="sticky top-20 z-40 bg-white/90 backdrop-blur-lg rounded-2xl border border-slate-200 p-3 sm:px-4 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-5 shadow-sm transition-all duration-300 mx-auto">
+          <div className="sticky top-20 z-40 bg-white/90 backdrop-blur-lg rounded-2xl border border-slate-200 p-2 sm:px-3 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4 shadow-sm transition-all duration-300 mx-auto">
             <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               {categories.map(c => (
                 <button

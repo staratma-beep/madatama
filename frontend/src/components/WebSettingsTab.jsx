@@ -81,11 +81,11 @@ export const WebSettingsTab = () => {
                         href={`http://${window.location.hostname}:5173`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 text-sm font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-2.5 rounded-xl hover:bg-indigo-100 hover:text-indigo-800 transition-colors"
+                        className="flex items-center gap-2 text-[13px] font-semibold bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-md hover:bg-slate-50 transition-colors"
                     >
-                        <Globe size={18} /> Buka Web
+                        <Globe size={16} /> Buka Web
                     </a>
-                    <Button onClick={save} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md h-auto">
+                    <Button onClick={save} className="flex gap-2 items-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md font-semibold transition-all h-auto">
                         Simpan Perubahan
                     </Button>
                 </div>
@@ -121,19 +121,19 @@ export const WebSettingsTab = () => {
                                 <textarea
                                     value={data.subtitle} onChange={e => setData({ ...data, subtitle: e.target.value })}
                                     placeholder="Dari spanduk besar hingga stempel, kami mendesain..."
-                                    className="w-full flex min-h-[120px] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-shadow leading-relaxed"
+                                    className="w-full flex min-h-[120px] rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400 transition-shadow leading-relaxed"
                                 />
                             </div>
 
-                            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                                <Label className="text-emerald-800 font-bold mb-1.5 block">Nomor Telepon / WhatsApp CS</Label>
-                                <p className="text-[11px] text-emerald-600 mb-3 leading-tight opacity-90">Tombol hubungi kami akan diarahkan ke kontak ini.</p>
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                                <Label className="text-slate-700 font-semibold mb-1 block">Nomor Telepon / WhatsApp CS</Label>
+                                <p className="text-[11px] text-slate-400 mb-3 leading-tight">Tombol hubungi kami akan diarahkan ke kontak ini.</p>
                                 <div className="flex">
-                                    <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-emerald-200 bg-white text-emerald-700 font-bold text-sm">+</span>
+                                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-600 font-semibold text-sm">+</span>
                                     <Input
                                         value={data.whatsapp_number || ""} onChange={e => setData({ ...data, whatsapp_number: e.target.value })}
                                         placeholder="6281234567890 (Gunakan awalan 62)"
-                                        className="rounded-l-none font-mono font-bold bg-white border-emerald-200 focus-visible:ring-emerald-500 h-10"
+                                        className="rounded-l-none font-mono bg-white border-slate-200 focus-visible:ring-indigo-400 h-10"
                                     />
                                 </div>
                             </div>
@@ -152,14 +152,14 @@ export const WebSettingsTab = () => {
                             {/* Logo */}
                             <div>
                                 <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-3">Logo Web (Header Utama)</Label>
-                                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
                                     <div className="grid h-16 w-16 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
                                         {data.logo_url ? <img src={data.logo_url} alt="Logo" className="w-full h-full object-contain p-1.5" /> : <ImageIcon size={26} className="text-slate-300" />}
                                     </div>
                                     <div className="flex flex-col items-start gap-2 w-full">
                                         <div className="relative w-full">
                                             <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Unggah Logo" />
-                                            <Button type="button" variant="outline" size="sm" className="w-full h-8 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 pointer-events-none">Pilih Logo Baru</Button>
+                                            <Button type="button" variant="outline" size="sm" className="w-full h-8 border-slate-200 text-slate-600 bg-white hover:bg-slate-50 pointer-events-none">Pilih Logo Baru</Button>
                                         </div>
                                         {data.logo_url && <button onClick={() => setData({ ...data, logo_url: "" })} className="text-[11px] font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2">Hapus Logo</button>}
                                     </div>
@@ -169,14 +169,14 @@ export const WebSettingsTab = () => {
                             {/* Favicon */}
                             <div>
                                 <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-3">Icon Tabs (Favicon)</Label>
-                                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
                                     <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-lg border border-white bg-white shadow-sm">
                                         {data.favicon_url ? <img src={data.favicon_url} alt="Favicon" className="w-full h-full object-contain p-1" /> : <Globe size={20} className="text-slate-300" />}
                                     </div>
                                     <div className="flex flex-col items-start gap-1.5 w-full">
                                         <div className="relative w-full">
                                             <input type="file" accept="image/x-icon,image/png,image/jpeg" onChange={handleFaviconUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Unggah Favicon" />
-                                            <Button type="button" variant="outline" size="sm" className="w-full h-7 text-xs border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 pointer-events-none">Unggah Icon</Button>
+                                            <Button type="button" variant="outline" size="sm" className="w-full h-7 text-xs border-slate-200 text-slate-600 bg-white hover:bg-slate-50 pointer-events-none">Unggah Icon</Button>
                                         </div>
                                         {data.favicon_url && <button onClick={() => setData({ ...data, favicon_url: "" })} className="text-[10px] font-medium text-rose-500 hover:text-rose-700 underline underline-offset-2 pt-0.5">Hapus Icon</button>}
                                     </div>
@@ -189,20 +189,20 @@ export const WebSettingsTab = () => {
                         {/* Banner */}
                         <div>
                             <Label className="text-slate-700 font-bold mb-3 block">Gambar Latar Belakang Beranda (Hero Banner)</Label>
-                            <div className="flex gap-5 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200/60 flex-col sm:flex-row">
-                                <div className="bg-white w-full sm:w-48 h-28 rounded-xl flex-none grid place-items-center overflow-hidden border border-slate-300 shadow-sm relative group">
+                            <div className="flex gap-5 mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200 flex-col sm:flex-row">
+                                <div className="bg-white w-full sm:w-44 h-24 rounded-lg flex-none grid place-items-center overflow-hidden border border-slate-200 shadow-sm relative group">
                                     {data.banner_url ? (
                                         <img src={data.banner_url} alt="Banner" className={`w-full h-full object-cover object-${data.banner_position || 'center'}`} />
                                     ) : (
-                                        <ImageIcon size={32} className="text-slate-300" />
+                                        <ImageIcon size={28} className="text-slate-300" />
                                     )}
                                 </div>
                                 <div className="flex-1 space-y-3 flex flex-col justify-center">
                                     <div className="relative inline-block w-full sm:w-auto">
                                         <input type="file" accept="image/*" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Unggah Banner" />
-                                        <Button type="button" size="sm" className="w-full bg-slate-800 hover:bg-slate-900 text-white shadow pointer-events-none">Unggah Banner Latar</Button>
+                                        <Button type="button" size="sm" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white pointer-events-none">Unggah Banner Latar</Button>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 leading-relaxed border-l-2 border-indigo-300 pl-2">Upload visual landscape/melebar dengan resolusi tinggi. Teks web Anda akan tampil melayang di atas gambar ini.</p>
+                                    <p className="text-[11px] text-slate-500 leading-relaxed border-l-2 border-slate-300 pl-2">Upload visual landscape/melebar dengan resolusi tinggi. Teks web Anda akan tampil melayang di atas gambar ini.</p>
                                     {data.banner_url && (
                                         <button onClick={() => setData({ ...data, banner_url: "" })} className="text-xs font-bold text-rose-500 hover:text-rose-700 underline w-fit">Hapus Banner Latar Belakang</button>
                                     )}
@@ -210,31 +210,31 @@ export const WebSettingsTab = () => {
                             </div>
 
                             {data.banner_url && (
-                                <div className="mt-4 bg-indigo-50/50 border border-indigo-100 p-5 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-bold text-indigo-900 block">Titik Fokus Gambar:</Label>
-                                        <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="mt-4 bg-white border border-slate-200 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">Titik Fokus Gambar:</Label>
+                                        <div className="flex bg-slate-50 p-1 rounded-md border border-slate-200">
                                             {['top', 'center', 'bottom'].map(pos => (
                                                 <button
                                                     key={pos}
                                                     onClick={() => setData({ ...data, banner_position: pos })}
-                                                    className={`flex-1 py-1.5 text-[11px] font-bold capitalize rounded-md transition-all ${data.banner_position === pos ? 'bg-indigo-600 shadow-sm text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                                                    className={`flex-1 py-1.5 text-[11px] font-semibold capitalize rounded transition-all ${data.banner_position === pos ? 'bg-indigo-600 shadow-sm text-white' : 'text-slate-500 hover:bg-white hover:text-slate-700'}`}
                                                 >
-                                                    {pos === 'top' ? 'Agak Ke Atas' : pos === 'center' ? 'Tengah (Default)' : 'Agak Ke Bawah'}
+                                                    {pos === 'top' ? 'Agak Ke Atas' : pos === 'center' ? 'Tengah' : 'Agak Ke Bawah'}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-bold text-indigo-900 flex justify-between">
-                                            <span>Transparansi Hamparan Gelap (Overlay):</span>
-                                            <span className="bg-indigo-200 text-indigo-800 px-1.5 rounded">{data.banner_opacity || 40}%</span>
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 flex justify-between">
+                                            <span>Transparansi Overlay Gelap:</span>
+                                            <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-1.5 rounded text-[10px] font-bold">{data.banner_opacity || 40}%</span>
                                         </Label>
                                         <input
                                             type="range" min="0" max="100"
                                             value={data.banner_opacity || 40}
                                             onChange={(e) => setData({ ...data, banner_opacity: parseInt(e.target.value) })}
-                                            className="w-full accent-indigo-600 h-2.5 bg-white border border-slate-200 rounded-lg appearance-none cursor-pointer shadow-inner mt-2"
+                                            className="w-full accent-indigo-600 h-2 rounded cursor-pointer mt-1"
                                             title="Atur transparansi jaring gelap di atas banner"
                                         />
                                     </div>
@@ -249,7 +249,7 @@ export const WebSettingsTab = () => {
                             <Label className="text-slate-700 font-bold mb-4 block">Nuansa Warna Publik (Gradient Background)</Label>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                                 {[
-                                    { id: 'indigo-purple', label: 'Eksklusif (Ungu/Biru)', color: 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200' },
+                                    { id: 'indigo-purple', label: 'Eksklusif (Ungu)', color: 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200' },
                                     { id: 'emerald-teal', label: 'Segar (Hijau)', color: 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200' },
                                     { id: 'rose-orange', label: 'Hangat (Merah)', color: 'bg-gradient-to-br from-rose-50 to-orange-50 border-rose-200' },
                                     { id: 'blue-cyan', label: 'Profesional (Biru)', color: 'bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200' },
@@ -258,10 +258,13 @@ export const WebSettingsTab = () => {
                                     <div
                                         key={theme.id}
                                         onClick={() => setData({ ...data, theme_gradient: theme.id })}
-                                        className={`cursor-pointer rounded-xl border-2 p-1.5 transition-all bg-white hover:bg-slate-50 ${data.theme_gradient === theme.id ? 'border-indigo-500 shadow-md transform scale-[1.03] ring-4 ring-indigo-50' : 'border-transparent hover:border-slate-300'}`}
+                                        className={`cursor-pointer rounded-lg border-2 p-1 transition-all bg-white hover:bg-slate-50 ${data.theme_gradient === theme.id
+                                            ? 'border-indigo-500 shadow-sm ring-2 ring-indigo-100'
+                                            : 'border-transparent hover:border-slate-200'
+                                            }`}
                                     >
-                                        <div className={`h-12 w-full rounded-md border shadow-inner ${theme.color}`}></div>
-                                        <p className={`text-center text-[10px] font-bold mt-2 ${data.theme_gradient === theme.id ? 'text-indigo-700' : 'text-slate-500'}`}>{theme.label}</p>
+                                        <div className={`h-10 w-full rounded border shadow-inner ${theme.color}`}></div>
+                                        <p className={`text-center text-[10px] font-semibold mt-1.5 ${data.theme_gradient === theme.id ? 'text-indigo-700' : 'text-slate-500'}`}>{theme.label}</p>
                                     </div>
                                 ))}
                             </div>
