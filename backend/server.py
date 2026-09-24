@@ -349,6 +349,7 @@ async def login(req: LoginRequest, request: Request, response: Response):
             key="access_token",
             value=access_token,
             httponly=True,
+            path="/",
             max_age=30 * 60, # 30 Menit
             expires=30 * 60,
             samesite="lax",
@@ -386,7 +387,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/logout")
 async def logout(response: Response, current_user: dict = Depends(get_current_user)):
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", path="/")
     await add_log("Logout", f"User {current_user['username']} keluar sesi.")
     return {"ok": True}
 

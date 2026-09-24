@@ -179,8 +179,9 @@ export const UserManagementTab = ({ authUser }) => {
             const data = await api.getUsers();
             setUsers(data);
         } catch (err) {
+            console.error(err);
             if (err?.response?.status === 403) toast.error("Hanya Owner yang bisa mengakses halaman ini.");
-            else toast.error("Gagal memuat daftar pengguna");
+            else toast.error("Gagal memuat: " + (err?.response?.data?.detail || err.message));
         } finally { setLoading(false); }
     }, []);
 
