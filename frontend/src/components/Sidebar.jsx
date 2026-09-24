@@ -75,8 +75,8 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
                                 <Printer size={16} />
                             </div>
                         )}
-                        <div className="flex flex-col whitespace-nowrap overflow-hidden pr-2 justify-center">
-                            <span className="text-[22px] font-black text-slate-800 tracking-tight leading-none truncate">
+                        <div className="flex flex-col whitespace-nowrap overflow-hidden pr-2 justify-center mt-1">
+                            <span className="text-xl font-black text-slate-900 tracking-tight leading-none truncate uppercase">
                                 {settings?.nama_usaha || "Navigasi Utama"}
                             </span>
                         </div>

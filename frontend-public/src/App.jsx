@@ -49,7 +49,7 @@ const Navbar = ({ cartCount, settings }) => {
   return (
     <>
       <nav className="w-full sticky top-0 z-50 transition-all bg-white/90 backdrop-blur-xl border-b-[1.5px] border-slate-200">
-        <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-black text-xl text-slate-900 tracking-tight">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="w-8 h-8 object-contain" />
@@ -204,8 +204,8 @@ const Catalog = ({ cart, setCart }) => {
   return (
     <>
       {/* Banner Section */}
-      <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 mt-4 sm:mt-6">
-        <div className={`relative w-full ${settings.banner_url ? 'h-[25vh] min-h-[240px] bg-slate-900 border-[1.5px] border-slate-900 overflow-hidden' : 'pt-24 pb-8 overflow-hidden border-[1.5px] border-slate-200 ' + getGradientClass(settings.theme_gradient)}`} style={{ borderRadius: '2px' }}>
+      <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+        <div className={`relative w-full ${settings.banner_url ? 'h-[16vh] min-h-[140px] lg:min-h-[180px] bg-slate-900 border-[1.5px] border-slate-900 overflow-hidden' : 'pt-16 pb-6 overflow-hidden border-[1.5px] border-slate-200 ' + getGradientClass(settings.theme_gradient)}`} style={{ borderRadius: '2px' }}>
           {settings.banner_url ? (
             <div className="absolute inset-0">
               <img
@@ -235,25 +235,25 @@ const Catalog = ({ cart, setCart }) => {
             <div className="absolute top-0 left-1/2 w-px h-full bg-white/40"></div>
           </div>
 
-          <div className="relative z-10 w-full h-full mx-auto px-6 lg:px-10 flex flex-col justify-center pt-8 pb-4">
-            <p className="text-white/80 font-bold tracking-[0.2em] text-[9px] sm:text-[11px] mb-2 uppercase drop-shadow-md">
+          <div className="relative z-10 w-full h-full mx-auto px-6 lg:px-10 flex flex-col justify-center pt-4 pb-2">
+            <p className="text-white/80 font-bold tracking-[0.2em] text-[9px] sm:text-[10px] mb-1.5 uppercase drop-shadow-md">
               {settings.subtitle || "FEATURED COLLECTION"}
             </p>
-            <h1 className={`text-xl sm:text-2xl md:text-3xl font-black mb-4 tracking-tighter leading-tight max-w-2xl whitespace-pre-wrap ${settings.banner_url ? 'text-white drop-shadow-2xl' : 'text-slate-900'}`}>
+            <h1 className={`text-lg sm:text-xl md:text-2xl font-black mb-3.5 tracking-tighter leading-tight max-w-2xl whitespace-pre-wrap ${settings.banner_url ? 'text-white drop-shadow-2xl' : 'text-slate-900'}`}>
               {settings.title || "PUSHING\nBOUNDARIES"}
             </h1>
 
-            <a href="#catalog" className="w-fit text-xs font-black tracking-widest text-white uppercase border-[1.5px] border-white/60 px-6 py-2.5 hover:bg-white hover:text-slate-900 transition-all duration-300 backdrop-blur-sm shadow-xl" style={{ borderRadius: '2px' }}>
+            <a href="#catalog" className="w-fit text-[10px] font-black tracking-widest text-white uppercase border-[1.5px] border-white/60 px-5 py-2 hover:bg-white hover:text-slate-900 transition-all duration-300 backdrop-blur-sm shadow-sm" style={{ borderRadius: '2px' }}>
               SHOP NOW
             </a>
           </div>
         </div>
       </div >
 
-      <div id="catalog" className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <div id="catalog" className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
 
         {products.length > 0 && (
-          <div className="sticky top-20 z-40 bg-white/95 backdrop-blur-md border border-slate-200 p-2 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-6 shadow-sm transition-all mx-auto" style={{ borderRadius: '2px' }}>
+          <div className="sticky top-[56px] z-40 bg-white/95 backdrop-blur-md border-[1.5px] border-slate-200 p-2 flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4 shadow-sm transition-all mx-auto" style={{ borderRadius: '2px' }}>
             <div className="flex items-center gap-1 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
               {categories.map(c => (
                 <button
@@ -306,44 +306,44 @@ const Catalog = ({ cart, setCart }) => {
                     </div>
                   )}
                   {/* Category tag */}
-                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[9px] font-black tracking-widest text-slate-900 uppercase border border-slate-200 shadow-sm" style={{ borderRadius: '2px' }}>
+                  <div className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-sm px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-900 uppercase border border-slate-200 shadow-sm" style={{ borderRadius: '2px' }}>
                     {p.kategori}
                   </div>
                 </div>
-                <div className="p-3.5 sm:p-4 flex flex-col flex-1">
-                  <h3 className="font-black text-sm sm:text-base text-slate-900 mb-0.5 leading-snug uppercase tracking-tight line-clamp-2" title={p.nama}>{p.nama}</h3>
-                  {p.deskripsi && <p className="text-[10px] sm:text-xs text-slate-500 line-clamp-2 leading-relaxed mb-2" title={p.deskripsi}>{p.deskripsi}</p>}
+                <div className="p-2 sm:p-3 flex flex-col flex-1">
+                  <h3 className="font-black text-xs sm:text-sm text-slate-900 mb-0 leading-snug uppercase tracking-tight line-clamp-2" title={p.nama}>{p.nama}</h3>
+                  {p.deskripsi && <p className="text-[9px] sm:text-[10px] text-slate-500 line-clamp-2 leading-snug mb-1.5 mt-0.5" title={p.deskripsi}>{p.deskripsi}</p>}
 
                   <div className="mt-auto pt-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">EST. HARGA</span>
-                    <p className="font-black text-slate-900 text-lg sm:text-xl tracking-tight mb-2.5">{formatRupiah(p.harga_jual)}</p>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0">EST. HARGA</span>
+                    <p className="font-black text-slate-900 text-base sm:text-lg tracking-tight mb-2">{formatRupiah(p.harga_jual)}</p>
 
-                    <div className="flex flex-col gap-2 w-full">
+                    <div className="flex flex-col w-full">
                       <div className="flex flex-wrap items-center gap-1.5 w-full">
-                        <div className="flex-1 flex border-[1.5px] border-slate-200 h-[36px] group-hover:border-slate-900 transition-colors bg-white min-w-[80px]">
+                        <div className="flex-none flex border-[1.5px] border-slate-200 h-[30px] group-hover:border-slate-900 transition-colors bg-white w-[80px]">
                           <button
                             onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, (prev[p.id] || 1) - 1) }))}
-                            className="w-7 sm:w-8 flex-none flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors font-bold text-lg"
+                            className="w-6 flex-none flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors font-bold text-base"
                           >-</button>
                           <input
                             type="number"
                             min="1"
                             value={cardQtys[p.id] || 1}
                             onChange={(e) => setCardQtys(prev => ({ ...prev, [p.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                            className="w-full flex-1 min-w-0 bg-transparent text-center font-black text-slate-900 border-x-[1.5px] border-slate-200 group-hover:border-slate-900 transition-colors focus:outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-full flex-1 min-w-0 px-0 bg-transparent text-center font-black text-slate-900 border-x-[1.5px] border-slate-200 group-hover:border-slate-900 transition-colors focus:outline-none text-[10px] sm:text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                           <button
                             onClick={() => setCardQtys(prev => ({ ...prev, [p.id]: (prev[p.id] || 1) + 1 }))}
-                            className="w-7 sm:w-8 flex-none flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors font-bold text-lg"
+                            className="w-6 flex-none flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors font-bold text-base"
                           >+</button>
                         </div>
-                        <div className="flex-[2] flex gap-1.5 h-[36px] min-w-[110px]">
-                          <button onClick={() => addToCart(p)} className="flex-1 bg-slate-900 border-[1.5px] border-slate-900 hover:bg-white hover:text-slate-900 text-white flex items-center justify-center gap-1.5 transition-all font-black text-[10px] sm:text-[11px] uppercase tracking-wider min-w-0 px-2" title="Keranjang">
-                            <ShoppingCart size={14} strokeWidth={2.5} className="flex-none" /> <span className="truncate">Beli</span>
+                        <div className="flex-1 flex gap-1.5 h-[30px] min-w-[90px]">
+                          <button onClick={() => addToCart(p)} className="flex-1 bg-slate-900 border-[1.5px] border-slate-900 hover:bg-white hover:text-slate-900 text-white flex items-center justify-center gap-1.5 transition-all font-black text-[9px] sm:text-[10px] uppercase tracking-wider min-w-0 px-1.5" title="Keranjang">
+                            <ShoppingCart size={12} strokeWidth={2.5} className="flex-none" /> <span className="truncate">Beli</span>
                           </button>
                           {/(kaos|baju|pakaian|t-?shirt|hoodie|jacket|jaket)/i.test(p.nama + ' ' + (p.kategori || '')) && (
-                            <button onClick={() => setEditingProduct(p)} className="flex-none px-2.5 sm:px-3 border-[1.5px] border-slate-200 text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-colors group-hover:border-slate-900" title="Desain Kustom">
-                              <ImageIcon size={15} strokeWidth={2} />
+                            <button onClick={() => setEditingProduct(p)} className="flex-none px-2 sm:px-2.5 border-[1.5px] border-slate-200 text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-colors group-hover:border-slate-900" title="Desain Kustom">
+                              <ImageIcon size={13} strokeWidth={2} />
                             </button>
                           )}
                         </div>

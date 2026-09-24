@@ -49,27 +49,29 @@ export const Login = ({ onLogin, profile: propProfile }) => {
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
             <div className="w-full max-w-sm">
-
-                {/* Logo & Nama Usaha */}
-                <div className="text-center mb-10 mt-6 relative">
-                    <div
-                        className="w-32 h-32 mx-auto flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300"
-                        style={profile?.logo ? {} : { background: "var(--theme-600, #4f46e5)", borderRadius: "1.25rem", boxShadow: "0 8px 16px rgba(0,0,0,0.15)" }}
-                    >
-                        {profile?.logo ? (
-                            <img src={profile.logo} alt="Logo" className="w-32 h-32 object-contain drop-shadow-md" />
-                        ) : (
-                            <span className="text-[3.5rem] font-black text-white">{firstChar}</span>
-                        )}
-                    </div>
-
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight -mt-4 mb-0.5">{namaUsaha}</h1>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tagline}</p>
-                </div>
-
                 {/* Card Form */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
-                    <h2 className="text-base font-bold text-slate-700 mb-5">Masuk ke Akun</h2>
+
+                    {/* Logo & Nama Usaha */}
+                    <div className="flex items-center justify-center gap-4 mb-8">
+                        <div
+                            className="w-16 h-16 flex-none flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300"
+                            style={profile?.logo ? {} : { background: "var(--theme-600, #4f46e5)", borderRadius: "1rem", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                        >
+                            {profile?.logo ? (
+                                <img src={profile.logo} alt="Logo" className="w-16 h-16 object-contain drop-shadow-sm" />
+                            ) : (
+                                <span className="text-3xl font-black text-white">{firstChar}</span>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col justify-center">
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase mb-1 leading-none">{namaUsaha}</h1>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest line-clamp-2 leading-relaxed">{tagline}</p>
+                        </div>
+                    </div>
+
+
 
                     {/* Error */}
                     {error && (

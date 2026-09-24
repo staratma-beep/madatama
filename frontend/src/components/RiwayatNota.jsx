@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { formatRupiah, formatTanggal, monthKey, monthLabel } from "../lib/format";
 import { api } from "../lib/api";
 import { downloadNota, downloadInvoice, downloadSuratJalan } from "../lib/nota";
-import { exportSalesCSV } from "../lib/salesExport";
+
 import { downloadReport } from "../lib/salesReport";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -90,11 +90,7 @@ export const RiwayatNota = ({ onSaleUpdate }) => {
                                 <FileText size={14} /> Rekap PDF
                             </Button>
                         )}
-                        {sales.length > 0 && (
-                            <Button onClick={() => exportSalesCSV(filteredSales)} className="gap-2 h-8 bg-white text-[13px] font-medium shadow-sm border border-slate-200 hover:bg-slate-50">
-                                <Download size={14} /> Export CSV
-                            </Button>
-                        )}
+
                     </div>
                 </div>
 
