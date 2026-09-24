@@ -1,0 +1,30 @@
+﻿Username: owner
+Password field: $2b$12$QwaFGisMuhrX18rruEbqX.hIRi8F6xTQM4Lg55rOPbGXO4hbE0j4O
+Password_hash field: None
+Is active: None
+---
+Username: kasir
+Password field: $2b$12$QwaFGisMuhrX18rruEbqX.hIRi8F6xTQM4Lg55rOPbGXO4hbE0j4O
+Password_hash field: None
+Is active: None
+---
+Username: produksi
+Password field: $2b$12$QwaFGisMuhrX18rruEbqX.hIRi8F6xTQM4Lg55rOPbGXO4hbE0j4O
+Password_hash field: None
+Is active: None
+---
+Username: owner_admin
+Password field: None
+Password_hash field: $2b$12$GqXYR/LOBvbTlKrG0IXxteD27lrc2OYcig0nk4RaX6fL7RLyARM0O
+Is active: True
+---
+Username: staf_produksi
+Password field: None
+Password_hash field: $2b$12$0F/dnclZcCx9HWFtU/JldOEvDf0Hi6huUBCP/nmtg857pYJKJ39lS
+Is active: True
+---
+Username: kasir_utama
+Password field: None
+Password_hash field: $2b$12$ckwCE22IYHCY4RECg8Y8aO8ZlwiZHnWdkkxi9vbu2oo.zV2ULglN.
+Is active: True
+---

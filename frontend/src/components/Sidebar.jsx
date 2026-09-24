@@ -34,6 +34,22 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
         }
     }
 
+    // Ensure "users" tab appears for Owner under Sistem/Pengaturan group
+    if (authUser?.role === "Owner") {
+        const hasUsers = groups.some(g => g.keys.includes("users"));
+        if (!hasUsers) {
+            const settingsGroup = groups.find(g =>
+                g.title.toLowerCase().includes("pengaturan") || g.title.toLowerCase().includes("katalog") || g.title.toLowerCase().includes("sistem")
+            );
+            if (settingsGroup) {
+                settingsGroup.keys.push("users");
+            } else {
+                groups.push({ title: "Sistem", keys: ["users"] });
+            }
+        }
+    }
+
+
     const theme = THEME_COLORS[appTheme] || THEME_COLORS.indigo;
 
     const getVisibleTabsInGroup = (keys) => {
@@ -59,12 +75,9 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
                                 <Printer size={16} />
                             </div>
                         )}
-                        <div className="flex flex-col whitespace-nowrap overflow-hidden">
-                            <span className="font-heading text-[13px] font-extrabold text-slate-800 leading-tight truncate">
+                        <div className="flex flex-col whitespace-nowrap overflow-hidden pr-2 justify-center">
+                            <span className="text-[22px] font-black text-slate-800 tracking-tight leading-none truncate">
                                 {settings?.nama_usaha || "Navigasi Utama"}
-                            </span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                                {settings?.tagline_usaha || "Official System"}
                             </span>
                         </div>
                     </div>

@@ -1,0 +1,88 @@
+﻿python : (trapped) error rea
+ding bcrypt version
+At line:1 char:1
++ python verify_users.py 2>&
+1 | Out-File -Encoding utf8 
+vout.txt; Get-C ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~
+    + CategoryInfo          
+    : NotSpecified: ((trap  
+  ped) error reading bcry   
+ pt version:String) [],     
+RemoteException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+Traceback (most recent call 
+last):
+  File "C:\Users\Admin\AppDa
+ta\Local\Programs\Python\Pyt
+hon312\Lib\site-packages\pas
+slib\handlers\bcrypt.py", li
+ne 620, in _load_backend_mix
+in
+    version = _bcrypt.__abou
+t__.__version__
+              ^^^^^^^^^^^^^^
+^^^
+AttributeError: module 'bcry
+pt' has no attribute '__abou
+t__'
+Total users: 6
+
+  Username : owner
+  Name     : Owner Admin
+  Role     : Owner
+  Active   : None
+  PassField: password (lama)
+Traceback (most recent call 
+last):
+  File "C:\Users\Admin\OneDr
+ive\Videos\madatama\madatama
+\backend\verify_users.py", l
+ine 29, in <module>
+    asyncio.run(main())
+  File "C:\Users\Admin\AppDa
+ta\Local\Programs\Python\Pyt
+hon312\Lib\asyncio\runners.p
+y", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\AppDa
+ta\Local\Programs\Python\Pyt
+hon312\Lib\asyncio\runners.p
+y", line 118, in run
+    return self._loop.run_un
+til_complete(task)
+           ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\AppDa
+ta\Local\Programs\Python\Pyt
+hon312\Lib\asyncio\base_even
+ts.py", line 691, in run_unt
+il_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\OneDr
+ive\Videos\madatama\madatama
+\backend\verify_users.py", l
+ine 27, in main
+    print(f"  Verify({pw}): 
+{'OK \u2713' if ok else 'FAI
+L'}")
+  File "C:\Users\Admin\AppDa
+ta\Local\Programs\Python\Pyt
+hon312\Lib\encodings\cp1252.
+py", line 19, in encode
+    return codecs.charmap_en
+code(input,self.errors,encod
+ing_table)[0]
+           ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+UnicodeEncodeError: 'charmap
+' codec can't encode charact
+er '\u2713' in position 19: 
+character maps to <undefined
+>

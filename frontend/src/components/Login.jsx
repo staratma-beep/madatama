@@ -1,12 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "../lib/api";
-import { Lock, User, Terminal, Loader2 } from "lucide-react";
+import { applyAppTheme } from "../lib/theme";
+import { Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
 
-export const Login = ({ onLogin, profile }) => {
+export const Login = ({ onLogin, profile: propProfile }) => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [profile, setProfile] = useState(propProfile || {});
+
+    useEffect(() => {
+        api.getSettings().then(s => {
+            setProfile(s);
+            if (s?.app_theme) applyAppTheme(s.app_theme);
+        }).catch(() => { });
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -14,85 +24,122 @@ export const Login = ({ onLogin, profile }) => {
         setError("");
         try {
             const res = await api.login({ username, password });
-            if (res.ok) {
-                onLogin(res.user);
-            }
+            if (res.ok) onLogin(res.user);
         } catch (err) {
+            console.error("Login error:", err?.response?.status, err?.response?.data, err?.message);
             if (err.response?.status === 401) {
-                setError("Kredensial salah. Coba lagi.");
+                setError("Username atau password salah.");
+            } else if (err.response?.status === 429) {
+                setError("Akun terkunci sementara. Coba lagi dalam 15 menit.");
+            } else if (!err.response) {
+                setError("Tidak dapat terhubung ke server.");
             } else {
-                setError("Terjadi kesalahan sistem.");
+                setError(err.response?.data?.detail || "Terjadi kesalahan. Silakan coba lagi.");
             }
         } finally {
             setLoading(false);
         }
     };
 
+    const namaUsaha = profile?.nama_usaha || "Madatama Pro";
+    const firstChar = namaUsaha.charAt(0).toUpperCase();
+
+    const tagline = profile?.tagline_usaha || "Sistem Manajemen Bisnis";
+
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transform transition-all">
-                <div className="bg-indigo-600 p-8 text-center">
-                    <div className="h-16 w-16 bg-white rounded-2xl mx-auto shadow-sm flex items-center justify-center p-2 mb-4">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm">
+
+                {/* Logo & Nama Usaha */}
+                <div className="text-center mb-10 mt-6 relative">
+                    <div
+                        className="w-32 h-32 mx-auto flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300"
+                        style={profile?.logo ? {} : { background: "var(--theme-600, #4f46e5)", borderRadius: "1.25rem", boxShadow: "0 8px 16px rgba(0,0,0,0.15)" }}
+                    >
                         {profile?.logo ? (
-                            <img src={profile.logo} alt="Logo" className="w-full h-full object-contain" />
+                            <img src={profile.logo} alt="Logo" className="w-32 h-32 object-contain drop-shadow-md" />
                         ) : (
-                            <span className="text-3xl font-black text-indigo-600 tracking-tighter">B</span>
+                            <span className="text-[3.5rem] font-black text-white">{firstChar}</span>
                         )}
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-1">{profile?.nama_usaha || "Madatama Pro"}</h1>
-                    <p className="text-indigo-200 text-sm">Sistem Manajemen Bisnis</p>
+
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight -mt-4 mb-0.5">{namaUsaha}</h1>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{tagline}</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="p-8 space-y-6">
+                {/* Card Form */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-7">
+                    <h2 className="text-base font-bold text-slate-700 mb-5">Masuk ke Akun</h2>
+
+                    {/* Error */}
                     {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100 flex items-center justify-center">
+                        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        <div className="relative">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Username (cth: owner / kasir / produksi)"
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                required
-                            />
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        {/* Username */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Username</label>
+                            <div className="relative">
+                                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Masukkan username"
+                                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[var(--theme-400,#818cf8)] focus:ring-2 focus:ring-[var(--theme-100,#e0e7ff)] transition-all"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required
+                                    autoComplete="username"
+                                />
+                            </div>
                         </div>
 
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input
-                                type="password"
-                                placeholder="PIN / Password"
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                        {/* Password */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Password</label>
+                            <div className="relative">
+                                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Masukkan password"
+                                    className="w-full pl-9 pr-9 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[var(--theme-400,#818cf8)] focus:ring-2 focus:ring-[var(--theme-100,#e0e7ff)] transition-all"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    autoComplete="current-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={20} /> : "Masuk ke Sistem"}
-                    </button>
-                </form>
-
-                <div className="bg-slate-50 p-4 border-t border-slate-100 text-center text-xs text-slate-400 font-medium">
-                    Ditenagai oleh Teknologi Cerdas
+                        {/* Submit */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
+                            style={{ background: "var(--theme-600, #4f46e5)" }}
+                        >
+                            {loading
+                                ? <><Loader2 size={15} className="animate-spin" /> Memproses...</>
+                                : "Masuk ke Sistem"
+                            }
+                        </button>
+                    </form>
                 </div>
-            </div>
 
-            <div className="absolute bottom-6 text-xs text-slate-400 flex items-center space-x-1 font-medium bg-white/50 px-3 py-1.5 rounded-full backdrop-blur-sm border border-slate-200">
-                <Terminal size={12} className="text-slate-400" />
-                <span>Gunakan <span className="font-bold text-slate-600">owner</span> (pass: 1234) untuk full akses.</span>
+                {/* Footer */}
+                <p className="text-center text-slate-400 text-[11px] mt-5">
+                    &copy; {new Date().getFullYear()} {namaUsaha} · Semua hak dilindungi
+                </p>
             </div>
         </div>
     );

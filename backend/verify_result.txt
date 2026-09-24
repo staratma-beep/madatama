@@ -1,0 +1,6 @@
+owner|Owner|active=missing|verify=True
+kasir|Kasir|active=missing|verify=True
+produksi|Produksi|active=missing|verify=True
+owner_admin|Owner|active=True|verify=True
+staf_produksi|Produksi|active=True|verify=True
+kasir_utama|Kasir|active=True|verify=True

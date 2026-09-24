@@ -3,7 +3,7 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 export const API = `${BACKEND_URL}/api`;
 
-const http = axios.create({ baseURL: API });
+const http = axios.create({ baseURL: API, withCredentials: true });
 
 export const api = {
   getTransactions: () => http.get("/transactions").then((r) => r.data),
@@ -47,7 +47,17 @@ export const api = {
   importTransactions: (items) => http.post("/import-transactions", items).then((r) => r.data),
   getLogs: () => http.get("/logs").then((r) => r.data),
   login: (creds) => http.post("/login", creds).then((r) => r.data),
-  getPublicOrders: () => http.get("/public-orders").then((r) => r.data),
+  logout: () => http.post("/logout").then((r) => r.data),
+  getMe: () => http.get("/user/me").then((r) => r.data),
+
+  // User Management (Owner only)
+  getUsers: () => http.get("/users").then((r) => r.data),
+  createUser: (d) => http.post("/users", d).then((r) => r.data),
+  updateUser: (username, d) => http.put(`/users/${username}`, d).then((r) => r.data),
+  resetUserPassword: (username, newPassword) => http.post(`/users/${username}/reset-password`, { new_password: newPassword }).then((r) => r.data),
+  deleteUser: (username) => http.delete(`/users/${username}`).then((r) => r.data),
+  factoryReset: (password) => http.post("/factory-reset", { password }).then((r) => r.data),
+
   resolvePublicOrder: (id) => http.post(`/public-orders/${id}/accept`).then((r) => r.data),
   deletePublicOrder: (id) => http.delete(`/public-orders/${id}/hard`).then((r) => r.data),
   editPublicOrder: (id, payload) => http.put(`/public-orders/${id}`, payload).then((r) => r.data),

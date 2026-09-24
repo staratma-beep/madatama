@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { api } from "../lib/api";
 import { formatNumberInput, parseNumber } from "../lib/format";
 import { toast } from "sonner";
-import { Save, Plus, ArrowUp, ArrowDown, Trash2, Palette, Settings, Image as ImageIcon, Upload, Building2, Database, CheckCircle2 } from "lucide-react";
+import { Save, Plus, ArrowUp, ArrowDown, Trash2, Palette, Settings, Image as ImageIcon, Upload, Building2, Database, CheckCircle2, AlertOctagon } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
@@ -19,7 +19,8 @@ const AVAILABLE_TABS = [
     { key: "rekap", label: "Laporan Rekap Bulanan" },
     { key: "labarugi", label: "Laba Rugi & Bagi Hasil" },
     { key: "log", label: "Log Aktivitas Sejarah" },
-    { key: "theme-settings", label: "Tampilan & Menu Utama" }
+    { key: "theme-settings", label: "Tampilan & Menu Utama" },
+    { key: "users", label: "Manajemen Akun Pengguna" },
 ];
 
 const THEMES = [
@@ -202,10 +203,59 @@ export const ThemeSettingsTab = () => {
         return AVAILABLE_TABS.find(t => t.key === key)?.label || key;
     };
 
+    const [resetModal, setResetModal] = useState(false);
+    const [resetPw, setResetPw] = useState("");
+    const [resetting, setResetting] = useState(false);
+
+    const handleFactoryReset = async (e) => {
+        e.preventDefault();
+        if (!resetPw) return;
+        setResetting(true);
+        try {
+            await api.factoryReset(resetPw);
+            toast.success("Berhasil: Sistem telah direset kembali ke kondisi awal pabrik!");
+            setResetModal(false);
+            setResetPw("");
+            setTimeout(() => window.location.reload(), 2000);
+        } catch (err) {
+            toast.error(err?.response?.data?.detail || "Gagal melakukan reset! Password mungkin salah.");
+        } finally {
+            setResetting(false);
+        }
+    };
+
     if (loading) return <div>Memuat...</div>;
 
     return (
         <div className="w-full flex flex-col gap-6 pb-10">
+            {resetModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in slide-in-from-bottom-4">
+                        <div className="flex flex-col items-center text-center mb-6">
+                            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                                <AlertOctagon size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800">Factory Reset Sistem</h3>
+                            <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                                Tindakan ini perlahan akan <b>MENGHAPUS SEMUA DATA TRANSAKSI</b> (kas, penjualan, stok, pesanan toko, log) di sistem ini dan <b>TIDAK BISA DIBATALKAN</b>. Pengaturan tema dan daftar user akan tetap aman.
+                            </p>
+                        </div>
+                        <form onSubmit={handleFactoryReset} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Password Owner</label>
+                                <Input type="password" placeholder="Ketik kata sandi Anda..." required value={resetPw} onChange={e => setResetPw(e.target.value)} className="h-11 border-slate-300" autoFocus />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setResetModal(false)} className="flex-1 py-2.5 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Batal</button>
+                                <button type="submit" disabled={resetting} className="flex-1 py-2.5 font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center gap-2 disabled:opacity-60">
+                                    {resetting ? "Mereset..." : "Hapus Semua"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 bg-transparent sticky top-0 z-20">
                 <div>
                     <h2 className="text-[20px] font-bold flex items-center gap-2 text-slate-800">
@@ -213,9 +263,14 @@ export const ThemeSettingsTab = () => {
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">Atur profil usaha, tampilan, dan navigasi sidebar untuk menyempurnakan pengalaman Anda.</p>
                 </div>
-                <button onClick={handleSave} className={`flex gap-2 items-center text-white px-5 py-2 rounded-md font-semibold transition-all shrink-0 h-auto ${THEME_STYLES[theme]?.primary || 'bg-indigo-600'} hover:opacity-90`}>
-                    <Save size={18} /> Simpan Perubahan
-                </button>
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setResetModal(true)} className="flex gap-2 items-center text-red-600 border border-red-200 bg-red-50 px-4 py-2 rounded-md font-bold transition-all hover:bg-red-100">
+                        <AlertOctagon size={16} /> Reset Sistem
+                    </button>
+                    <button onClick={handleSave} className={`flex gap-2 items-center text-white px-5 py-2 rounded-md font-semibold transition-all shrink-0 h-auto ${THEME_STYLES[theme]?.primary || 'bg-indigo-600'} hover:opacity-90`}>
+                        <Save size={18} /> Simpan Perubahan
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -318,27 +373,7 @@ export const ThemeSettingsTab = () => {
                             })}
                         </div>
 
-                        {/* Toggle Mode Gelap */}
-                        <div className="mt-8 border-t border-slate-100 pt-6">
-                            <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2">Pilih Nuansa Dashboard</h4>
-                            <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition-all">
-                                <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={darkMode}
-                                    onChange={(e) => setDarkMode(e.target.checked)}
-                                />
-                                <div className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${darkMode ? (THEME_STYLES[theme]?.primary || 'bg-slate-800') : 'bg-slate-300'}`}>
-                                    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-300 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="font-semibold text-slate-700 group-hover:text-slate-900 transition-colors text-[13px]">Mode Gelap (Dark Mode)</span>
-                                    <span className="text-[11px] text-slate-500 font-medium">Tampilan redup untuk kenyamanan mata & nuansa futuristik (berlaku di semua web admin ini).</span>
-                                </div>
-                            </label>
-                        </div>
-
-                        <p className="text-[11px] text-slate-400 mt-5 bg-slate-50 p-3 rounded-lg border border-slate-100">*Catatan: Perubahan warna tema dan nuansa akan sepenuhnya dimuat setelah konfigurasi disimpan / halaman direfresh.</p>
+                        <p className="text-[11px] text-slate-400 mt-5 bg-slate-50 p-3 rounded-lg border border-slate-100">*Catatan: Perubahan warna tema dan kustomisasi dashboard akan sepenuhnya dimuat setelah konfigurasi disimpan.</p>
                     </div>
 
                     {/* Hak Akses User */}

@@ -21,6 +21,7 @@ import { WebSettingsTab } from "@/components/WebSettingsTab";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemeSettingsTab } from "@/components/ThemeSettingsTab";
 import { RiwayatNota } from "@/components/RiwayatNota";
+import { UserManagementTab } from "@/components/UserManagementTab";
 import { THEME_COLORS, applyAppTheme } from "@/lib/theme";
 import { Toaster, toast } from "sonner";
 import {
@@ -55,27 +56,40 @@ function App() {
   const [editing, setEditing] = useState(null);
 
   const [authUser, setAuthUser] = useState(() => {
-    const saved = localStorage.getItem("madatama_user");
-    return saved ? JSON.parse(saved) : null;
+    // Restore session from sessionStorage (survives page refresh within same tab)
+    try {
+      const saved = sessionStorage.getItem("madatama_session");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
   });
+  const [authLoading, setAuthLoading] = useState(false);
 
   const handleLogin = (u) => {
-    localStorage.setItem("madatama_user", JSON.stringify(u));
+    sessionStorage.setItem("madatama_session", JSON.stringify(u));
     setAuthUser(u);
     setTab(u.role === "Produksi" ? "produksi" : "dashboard");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("madatama_user");
+  const handleLogout = async () => {
+    try { await api.logout(); } catch (e) { console.error("Logout error", e); }
+    sessionStorage.removeItem("madatama_session");
     setAuthUser(null);
   };
 
   const reload = useCallback(async () => {
-    const [t, r, p, s, fc, sl, pr] = await Promise.all([
-      api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(), api.getProducts(),
-    ]);
-    setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setSettings(s); setFixedCosts(fc); setSales(sl); setProducts(pr);
-  }, []);
+    if (!authUser) return; // Prevent triggering requests if not authenticated (avoids 401 spam)
+    try {
+      const [t, r, p, s, fc, sl, pr] = await Promise.all([
+        api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(), api.getProducts(),
+      ]);
+      setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setSettings(s); setFixedCosts(fc); setSales(sl); setProducts(pr);
+    } catch (e) {
+      // If unauthorized during reload, auto-logout
+      if (e.response && e.response.status === 401) {
+        setAuthUser(null);
+      }
+    }
+  }, [authUser]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -223,7 +237,9 @@ function App() {
     { key: "piutang", label: settings?.tab_names?.["piutang"] || "Piutang & Utang", icon: HandCoins },
     { key: "log", label: settings?.tab_names?.["log"] || "Log Aktivitas", icon: History },
     { key: "theme-settings", label: settings?.tab_names?.["theme-settings"] || "Tampilan & Menu", icon: SettingsIcon },
+    { key: "users", label: settings?.tab_names?.["users"] || "Manajemen Akun", icon: UserRoundCog },
   ];
+
 
   const tabs = allTabs.filter(t => {
     if (authUser?.role === "Owner") return true;
@@ -333,6 +349,7 @@ function App() {
               {tab === "pesanan-web" && <WebOrdersTab onAccepted={reload} />}
               {tab === "web" && <WebSettingsTab />}
               {tab === "theme-settings" && <ThemeSettingsTab />}
+              {tab === "users" && <UserManagementTab authUser={authUser} />}
             </div>
           </div>
         </main>
