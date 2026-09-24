@@ -35,14 +35,21 @@ export const WebOrdersTab = ({ onAccepted }) => {
     };
 
     const handleDeleteOrder = async (o) => {
-        if (!window.confirm(`Yakin ingin menghapus pesanan ${o.nama} secara permanen?`)) return;
-        try {
-            await api.deletePublicOrder(o.id);
-            toast.success("Pesanan berhasil dihapus");
-            refreshOrders();
-        } catch {
-            toast.error("Gagal menghapus pesanan");
-        }
+        setConfirmModal({
+            title: "Hapus Pesanan Permanen",
+            message: `Yakin ingin menghapus pesanan ${o.nama} secara permanen?`,
+            type: "danger",
+            onConfirm: async () => {
+                setConfirmModal(null);
+                try {
+                    await api.deletePublicOrder(o.id);
+                    toast.success("Pesanan berhasil dihapus");
+                    refreshOrders();
+                } catch {
+                    toast.error("Gagal menghapus pesanan");
+                }
+            }
+        });
     };
 
     const prevOrdersRef = useRef([]);
@@ -429,9 +436,12 @@ export const WebOrdersTab = ({ onAccepted }) => {
                                                                     <button onClick={() => handleConfirmPayment(o)} className="h-9 px-3.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"><Receipt size={14} /> Validasi Lunas</button>
                                                                 ) : (
                                                                     <button onClick={() => {
-                                                                        if (window.confirm(`Nasabah belum mengirim bukti via Web. Anda yakin ingin menandai pesanan ${o.nama} ini SEBAGAI LUNAS secara manual (Cth: Bayar Cash/WA)?`)) {
-                                                                            handleConfirmPayment(o);
-                                                                        }
+                                                                        setConfirmModal({
+                                                                            title: "Konfirmasi Pelunasan Manual",
+                                                                            message: `Nasabah belum mengirim bukti via Web. Anda yakin ingin menandai pesanan ${o.nama} ini SEBAGAI LUNAS secara manual (Cth: Bayar Cash/WA)?`,
+                                                                            type: "success",
+                                                                            onConfirm: () => handleConfirmPayment(o)
+                                                                        });
                                                                     }} className="h-9 px-3.5 bg-indigo-50 hover:bg-emerald-600 text-indigo-700 hover:text-white border border-indigo-200 hover:border-transparent font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap" title="Klik untuk melunaskan secara manual (bypass)"><Receipt size={14} /> Tandai Lunas</button>
                                                                 )
                                                             )}

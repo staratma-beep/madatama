@@ -135,13 +135,25 @@ export function Sidebar({ expanded, onToggle, currentTab, onSelectTab, tabs, aut
                                             : `text-slate-600 hover:bg-slate-200/50 hover:text-slate-900 font-medium`
                                             }`}
                                     >
-                                        <div className="shrink-0 flex items-center justify-center">
+                                        <div className="shrink-0 flex items-center justify-center relative">
                                             <t.icon size={19} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-slate-900" : `text-slate-600 group-hover:text-slate-900 transition-colors`} fill={isActive ? "none" : "none"} />
+                                            {!expanded && t.badge && (
+                                                <div className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[9px] font-bold text-white shadow-sm ring-2 ring-slate-100">
+                                                    {t.badge > 99 ? '99+' : t.badge}
+                                                </div>
+                                            )}
                                         </div>
                                         {expanded && (
-                                            <span className="text-[13px] whitespace-nowrap text-left truncate flex-1">
-                                                {t.label}
-                                            </span>
+                                            <>
+                                                <span className="text-[13px] whitespace-nowrap text-left truncate flex-1">
+                                                    {t.label}
+                                                </span>
+                                                {t.badge && (
+                                                    <div className="shrink-0 ml-1 px-1.5 py-0.5 rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
+                                                        {t.badge > 99 ? '99+' : t.badge}
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
 
                                         {/* Tooltip for collapsed state */}

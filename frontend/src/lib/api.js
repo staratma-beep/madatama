@@ -58,6 +58,7 @@ export const api = {
   deleteUser: (username) => http.delete(`/users/${username}`).then((r) => r.data),
   factoryReset: (password) => http.post("/factory-reset", { password }).then((r) => r.data),
 
+  getPublicOrders: () => http.get("/public-orders").then((r) => r.data),
   resolvePublicOrder: (id) => http.post(`/public-orders/${id}/accept`).then((r) => r.data),
   deletePublicOrder: (id) => http.delete(`/public-orders/${id}/hard`).then((r) => r.data),
   editPublicOrder: (id, payload) => http.put(`/public-orders/${id}`, payload).then((r) => r.data),

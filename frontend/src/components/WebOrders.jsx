@@ -5,24 +5,9 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator
 } from "./ui/dropdown-menu";
 
-export const WebOrders = ({ onNavigate }) => {
-    const [orders, setOrders] = useState([]);
-
-    const refreshOrders = async () => {
-        try {
-            const o = await api.getPublicOrders();
-            setOrders(o);
-        } catch (e) { }
-    };
-
-    useEffect(() => {
-        refreshOrders();
-        const inv = setInterval(refreshOrders, 30000);
-        return () => clearInterval(inv);
-    }, []);
-
-    const pendingOrders = orders.filter(o => o.status === "Menunggu Konfirmasi").map(o => ({ ...o, notifType: 'order' }));
-    const pendingPayments = orders.filter(o => o.payment_status === "Menunggu Konfirmasi Bayar").map(o => ({ ...o, notifType: 'payment' }));
+export const WebOrders = ({ onNavigate, publicOrders = [] }) => {
+    const pendingOrders = publicOrders.filter(o => o.status === "Menunggu Konfirmasi").map(o => ({ ...o, notifType: 'order' }));
+    const pendingPayments = publicOrders.filter(o => o.payment_status === "Menunggu Konfirmasi Bayar").map(o => ({ ...o, notifType: 'payment' }));
 
     const allNotifs = [...pendingOrders, ...pendingPayments].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     const notificationCount = allNotifs.length;
@@ -35,7 +20,7 @@ export const WebOrders = ({ onNavigate }) => {
     };
 
     return (
-        <DropdownMenu open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (open) refreshOrders() }}>
+        <DropdownMenu open={isOpen} onOpenChange={(open) => setIsOpen(open)}>
             <DropdownMenuTrigger asChild>
                 <button
                     className="relative grid h-8 w-8 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 place-items-center rounded-md transition-all shadow-sm outline-none"
@@ -43,8 +28,8 @@ export const WebOrders = ({ onNavigate }) => {
                 >
                     <Bell size={15} className={notificationCount > 0 ? "animate-pulse text-amber-500" : ""} />
                     {notificationCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
-                            {notificationCount < 10 ? notificationCount : '9+'}
+                        <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                            {notificationCount > 99 ? '99+' : notificationCount}
                         </span>
                     )}
                 </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "@/App.css";
 import { api } from "@/lib/api";
 import { computeCashBalance, monthDetail } from "@/lib/compute";
@@ -41,6 +41,8 @@ function App() {
   const [products, setProducts] = useState([]);
   const [saldoAwal, setSaldoAwal] = useState(0);
   const [settings, setSettings] = useState({});
+  const [publicOrders, setPublicOrders] = useState([]);
+  const prevWebOrdersRef = useRef([]);
   const [tab, setTab] = useState(() => {
     const saved = localStorage.getItem("madatama_user");
     if (saved) {
@@ -76,22 +78,55 @@ function App() {
     setAuthUser(null);
   };
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) { console.log(e); }
+  }, []);
+
   const reload = useCallback(async () => {
     if (!authUser) return; // Prevent triggering requests if not authenticated (avoids 401 spam)
     try {
-      const [t, r, p, s, fc, sl, pr] = await Promise.all([
+      const [t, r, p, s, fc, sl, pr, po] = await Promise.all([
         api.getTransactions(), api.getRecords(), api.getProfitShares(), api.getSettings(), api.getFixedCosts(), api.getSales(), api.getProducts(),
+        (authUser.role === "Owner" || authUser.role === "Kasir") ? api.getPublicOrders() : Promise.resolve([])
       ]);
       setTransactions(t); setRecords(r); setProfitShares(p); setSaldoAwal(s.saldo_awal || 0); setSettings(s); setFixedCosts(fc); setSales(sl); setProducts(pr);
+      setPublicOrders(po);
+
+      // Check for new web orders
+      const currentIds = po.map(x => x.id);
+      const prevIds = prevWebOrdersRef.current;
+      const hasNewOrder = currentIds.some(id => !prevIds.includes(id));
+      if (prevIds.length > 0 && hasNewOrder) {
+        playNotificationSound();
+        toast('🔔 Ada Pesanan Web Baru Masuk!', { style: { background: '#4f46e5', color: '#fff' } });
+      }
+      prevWebOrdersRef.current = currentIds;
     } catch (e) {
-      // If unauthorized during reload, auto-logout
       if (e.response && e.response.status === 401) {
         setAuthUser(null);
       }
     }
-  }, [authUser]);
+  }, [authUser, playNotificationSound]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    reload();
+    const intv = setInterval(reload, 10000);
+    return () => clearInterval(intv);
+  }, [reload]);
 
   useEffect(() => {
     document.title = settings.nama_usaha || "Madatama Pro";
@@ -131,6 +166,10 @@ function App() {
   const totalPiutang = useMemo(() => records.filter((r) => r.jenis === "Piutang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const totalUtang = useMemo(() => records.filter((r) => r.jenis === "Utang" && r.status === "Belum Lunas").reduce((a, r) => a + r.nominal, 0), [records]);
   const lowStock = useMemo(() => products.filter((p) => (p.harga_jual || 0) > 0 && (p.stok ?? 0) <= 5).sort((a, b) => (a.stok || 0) - (b.stok || 0)), [products]);
+
+  const pesananBadgeCount = useMemo(() => {
+    return publicOrders.filter(o => o.status === "Menunggu Konfirmasi" || (o.status !== "Menunggu Konfirmasi" && o.payment_status === "Menunggu Verifikasi")).length;
+  }, [publicOrders]);
 
   const handleAdd = () => { setEditing(null); setDialogOpen(true); };
   const handleEdit = (t) => { setEditing(t); setDialogOpen(true); };
@@ -226,7 +265,7 @@ function App() {
 
   const allTabs = [
     { key: "dashboard", label: settings?.tab_names?.["dashboard"] || "Dashboard Utama", icon: LayoutDashboard },
-    { key: "pesanan-web", label: settings?.tab_names?.["pesanan-web"] || "Pesanan Web", icon: ShoppingCart },
+    { key: "pesanan-web", label: settings?.tab_names?.["pesanan-web"] || "Pesanan Web", icon: ShoppingCart, badge: pesananBadgeCount > 0 ? pesananBadgeCount : null },
     { key: "kas", label: settings?.tab_names?.["kas"] || "Buku Kas", icon: BookText },
     { key: "hpp", label: settings?.tab_names?.["hpp"] || "Kalkulator & Kasir", icon: Calculator },
     { key: "produksi", label: settings?.tab_names?.["produksi"] || "Produksi", icon: Layers },
@@ -294,7 +333,7 @@ function App() {
                   <Globe size={13} className="text-slate-400" />
                   Buka Web
                 </a>
-                <WebOrders onAccepted={reload} onNavigate={() => setTab("pesanan-web")} />
+                <WebOrders onAccepted={reload} onNavigate={() => setTab("pesanan-web")} publicOrders={publicOrders} />
                 <div className="text-right hidden md:block">
                   <p className="text-sm font-bold text-slate-700 leading-tight">{authUser?.name}</p>
                   <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{authUser?.role}</p>
