@@ -17,11 +17,18 @@ WIB = timezone(timedelta(hours=7))
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+client = None
+db = None
 
 app = FastAPI()
+
+@app.on_event("startup")
+async def startup_db():
+    global client, db
+    mongo_url = os.environ.get("MONGO_URL")
+    if mongo_url:
+        client = AsyncIOMotorClient(mongo_url)
+        db = client["madatama"]
 
 # Create uploads directory if not exists
 os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
@@ -29,7 +36,7 @@ os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
 # Replace StaticFiles mount with an explicit endpoint to ensure CORSMiddleware applies
 from fastapi.responses import FileResponse
 
-api_router = APIRouter(prefix="/api")
+api_router = APIRouter()
 
 @app.get("/uploads/{filename}")
 async def get_upload_file(filename: str):
