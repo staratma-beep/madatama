@@ -22,11 +22,14 @@ class DBProxy:
         global _motor_client, _motor_db
         if _motor_client is None:
             mongo_url = os.environ.get("MONGO_URL")
-            if mongo_url:
+            if not mongo_url:
+                raise HTTPException(status_code=500, detail="MONGO_URL is completely missing from environment variables!")
+            try:
                 _motor_client = AsyncIOMotorClient(mongo_url)
                 _motor_db = _motor_client["madatama"]
-            else:
-                raise Exception("MONGO_URL is missing in .env")
+            except Exception as e:
+                import traceback
+                raise HTTPException(status_code=500, detail=f"DB connection failed: {e}. Trace: {traceback.format_exc()}")
         return getattr(_motor_db, name)
 
 _motor_client = None
