@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Request, Response, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -17,24 +17,11 @@ WIB = timezone(timedelta(hours=7))
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-client = None
-db = None
-app = FastAPI()
+mongo_url = os.environ['MONGO_URL']
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ['DB_NAME']]
 
-@app.middleware("http")
-async def ensure_db_connection(request, call_next):
-    global client, db
-    if client is None:
-        try:
-            mongo_url = os.environ.get("MONGO_URL")
-            if mongo_url:
-                client = AsyncIOMotorClient(mongo_url)
-                db = client["madatama"]
-        except Exception as e:
-            import traceback
-            from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
-    return await call_next(request)
+app = FastAPI()
 
 # Create uploads directory if not exists
 os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
@@ -42,7 +29,7 @@ os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
 # Replace StaticFiles mount with an explicit endpoint to ensure CORSMiddleware applies
 from fastapi.responses import FileResponse
 
-api_router = APIRouter()
+api_router = APIRouter(prefix="/api")
 
 @app.get("/uploads/{filename}")
 async def get_upload_file(filename: str):
@@ -275,251 +262,28 @@ async def add_log(action: str, description: str):
 async def get_logs():
     return await db.logs.find({}, {"_id": 0}).sort("created_at", -1).limit(200).to_list(200)
 
-from auth_security import (
-    verify_password, create_access_token, get_token_from_cookie, 
-    SECRET_KEY, ALGORITHM, LoginAuditSchema
-)
-from jose import jwt, JWTError
-
-async def get_current_user(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired or is invalid")
-    
-    user = await db.users.find_one({"username": username})
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    if not user.get("is_active", True):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
-    
-    return user
-
-def require_role(roles: List[str]):
-    async def role_checker(current_user: dict = Depends(get_current_user)):
-        if current_user.get("role") not in roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail=f"Tindakan ditolak. Hak akses diperlukan: {', '.join(roles)}"
-            )
-        return current_user
-    return role_checker
+import bcrypt
 
 @api_router.post("/login")
-async def login(req: LoginRequest, request: Request, response: Response):
-    try:
-        ip_address = str(request.client.host) if request.client and request.client.host else "unknown"
+async def login(req: LoginRequest):
+    user = await db.users.find_one({"username": req.username})
+    if not user:
+        raise HTTPException(status_code=401, detail="Username tidak ditemukan")
+    
+    if not bcrypt.checkpw(req.password.encode(), user["password"].encode()):
+        raise HTTPException(status_code=401, detail="Password salah")
         
-        user = await db.users.find_one({"username": req.username})
-        
-        # 1. User Tidak Ditemukan
-        if not user:
-            audit = LoginAuditSchema(username=req.username, ip_address=ip_address, status="FAILED")
-            await db.audit_logs.insert_one(audit.model_dump())
-            raise HTTPException(status_code=401, detail="Kredensial tidak valid")
-        
-        # 2. Check Lockout (Rate Limiting)
-        if user.get("locked_until"):
-            locked_until = datetime.fromisoformat(user["locked_until"])
-            if datetime.now() < locked_until:
-                audit = LoginAuditSchema(username=req.username, ip_address=ip_address, status="LOCKED")
-                await db.audit_logs.insert_one(audit.model_dump())
-                raise HTTPException(status_code=429, detail="Akun terkunci. Silakan coba 15 menit lagi.")
-            else:
-                await db.users.update_one({"_id": user["_id"]}, {"$set": {"locked_until": None, "failed_login_attempts": 0}})
-        
-        # 3. Check Password
-        is_valid = verify_password(req.password, user.get("password_hash", user.get("password", "")))
-        if not is_valid:
-            attempts = user.get("failed_login_attempts", 0) + 1
-            update_data = {"failed_login_attempts": attempts}
-            if attempts >= 5:
-                update_data["locked_until"] = (datetime.now() + timedelta(minutes=15)).isoformat()
-            await db.users.update_one({"_id": user["_id"]}, {"$set": update_data})
-            
-            audit = LoginAuditSchema(username=req.username, ip_address=ip_address, status="FAILED")
-            await db.audit_logs.insert_one(audit.model_dump())
-            raise HTTPException(status_code=401, detail="Kredensial tidak valid")
-            
-        # 4. Berhasil Login
-        await db.users.update_one({"_id": user["_id"]}, {"$set": {"failed_login_attempts": 0, "locked_until": None}})
-        
-        audit = LoginAuditSchema(username=req.username, ip_address=ip_address, status="SUCCESS")
-        await db.audit_logs.insert_one(audit.model_dump())
-        await add_log("Login", f"User {user['username']} [{user['role']}] berhasil masuk.")
-        
-        # Generate Token
-        access_token = create_access_token(data={"sub": user["username"], "role": user.get("role")})
-        
-        # Set Secure HttpOnly Cookie
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            path="/",
-            max_age=30 * 60, # 30 Menit
-            expires=30 * 60,
-            samesite="lax",
-            secure=False,
-        )
-        
-        return {
-            "ok": True,
-            "must_change_password": user.get("must_change_password", False),
-            "user": {
-                "username": user["username"],
-                "name": user.get("name", user["username"]),
-                "role": user.get("role", "Kasir")
-            }
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        error_msg = traceback.format_exc()
-        await db.logs.insert_one({"action": "Login Crash", "description": str(error_msg)})
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@api_router.get("/user/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
     return {
         "ok": True,
+        "token": user["username"],  # simple token
         "user": {
-            "username": current_user["username"],
-            "name": current_user.get("name", current_user["username"]),
-            "role": current_user.get("role", "Kasir")
+            "username": user["username"],
+            "name": user.get("name", user["username"]),
+            "role": user.get("role", "Kasir")
         }
     }
 
-@api_router.post("/logout")
-async def logout(response: Response, current_user: dict = Depends(get_current_user)):
-    response.delete_cookie("access_token", path="/")
-    await add_log("Logout", f"User {current_user['username']} keluar sesi.")
-    return {"ok": True}
-
-# ---------------- User Management (Owner Only) ----------------
-class UserCreateRequest(BaseModel):
-    username: str
-    password: str
-    name: str
-    role: str  # "Owner", "Produksi", "Kasir"
-
-class UserUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    username: Optional[str] = None
-    role: Optional[str] = None
-    is_active: Optional[bool] = None
-
-class PasswordResetRequest(BaseModel):
-    new_password: str
-
-@api_router.get("/users")
-async def list_users(current_user: dict = Depends(require_role(["Owner"]))):
-    users = await db.users.find({}, {"_id": 0, "password_hash": 0, "password": 0}).to_list(100)
-    return users
-
-@api_router.post("/users")
-async def create_user(req: UserCreateRequest, current_user: dict = Depends(require_role(["Owner"]))):
-    existing = await db.users.find_one({"username": req.username})
-    if existing:
-        raise HTTPException(status_code=400, detail="Username sudah digunakan")
-    if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password minimal 6 karakter")
-    from auth_security import get_password_hash
-    new_user = {
-        "id": str(uuid.uuid4()),
-        "username": req.username,
-        "password_hash": get_password_hash(req.password),
-        "name": req.name,
-        "role": req.role,
-        "is_active": True,
-        "must_change_password": True,
-        "created_at": datetime.now().isoformat(),
-        "failed_login_attempts": 0,
-        "locked_until": None
-    }
-    await db.users.insert_one(new_user)
-    await add_log("User", f"Owner membuat akun baru: {req.username} [{req.role}]")
-    return {"ok": True, "username": req.username}
-
-@api_router.put("/users/{username}")
-async def update_user(username: str, req: UserUpdateRequest, current_user: dict = Depends(require_role(["Owner"]))):
-    user = await db.users.find_one({"username": username})
-    if not user:
-        raise HTTPException(status_code=404, detail="User tidak ditemukan")
-    update_data = {}
-    if req.name is not None: update_data["name"] = req.name
-    if req.role is not None: update_data["role"] = req.role
-    if req.is_active is not None: update_data["is_active"] = req.is_active
-    if req.username is not None and req.username != username:
-        exist = await db.users.find_one({"username": req.username})
-        if exist:
-            raise HTTPException(status_code=400, detail="Username sudah digunakan")
-        update_data["username"] = req.username
-    if update_data:
-        await db.users.update_one({"username": username}, {"$set": update_data})
-    await add_log("User", f"Owner mengubah akun: {username}")
-    return {"ok": True}
-
-@api_router.post("/users/{username}/reset-password")
-async def reset_password(username: str, req: PasswordResetRequest, current_user: dict = Depends(require_role(["Owner"]))):
-    user = await db.users.find_one({"username": username})
-    if not user:
-        raise HTTPException(status_code=404, detail="User tidak ditemukan")
-    if len(req.new_password) < 6:
-        raise HTTPException(status_code=400, detail="Password minimal 6 karakter")
-    from auth_security import get_password_hash
-    await db.users.update_one(
-        {"username": username},
-        {"$set": {"password_hash": get_password_hash(req.new_password), "must_change_password": True, "failed_login_attempts": 0, "locked_until": None}}
-    )
-    await add_log("User", f"Owner mereset password akun: {username}")
-    return {"ok": True}
-
-@api_router.delete("/users/{username}")
-async def delete_user(username: str, current_user: dict = Depends(require_role(["Owner"]))):
-    if username == current_user["username"]:
-        raise HTTPException(status_code=400, detail="Tidak bisa menghapus akun sendiri")
-    result = await db.users.delete_one({"username": username})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User tidak ditemukan")
-    await add_log("User", f"Owner menghapus akun: {username}")
-    return {"ok": True}
-
-class FactoryResetRequest(BaseModel):
-    password: str
-
-@api_router.post("/factory-reset")
-async def factory_reset(req: FactoryResetRequest, current_user: dict = Depends(require_role(["Owner"]))):
-    from auth_security import verify_password
-    
-    # 1. Verify owner password
-    user = await db.users.find_one({"username": current_user["username"]})
-    if not user or not verify_password(req.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Password Owner tidak valid")
-        
-    # 2. Delete data from collections (leaving settings, fixed_costs, users alone)
-    await db.transactions.delete_many({})
-    await db.sales.delete_many({})
-    await db.public_orders.delete_many({})
-    await db.piutang.delete_many({})  # just in case
-    await db.profit_share.delete_many({})
-    await db.logs.delete_many({})
-    
-    # 3. Log the reset (this will be the only log left!)
-    await add_log("Sistem", f"FACTORY RESET dijalankan oleh {current_user['username']} - Semua data transaksi dihapus.")
-    
-    return {"ok": True, "message": "Sistem berhasil di-reset bersih."}
-
-
-
+# ---------------- Transactions ----------------
 @api_router.get("/transactions", response_model=List[Transaction])
 async def get_transactions():
     docs = await db.transactions.find({}, {"_id": 0}).to_list(10000)
@@ -725,24 +489,20 @@ async def delete_fixed_cost(fid: str):
 
 
 # ---------------- Products (Kalkulator HPP) ----------------
-@api_router.get("/products")
+@api_router.get("/products", response_model=List[Product])
 async def get_products():
-    try:
-        docs = await db.products.find({}, {"_id": 0}).to_list(2000)
-        if not docs:
-            objs = []
-            i = 0
-            for kategori, names in _PRODUCT_SEED.items():
-                for nama in names:
-                    objs.append(Product(kategori=kategori, nama=nama, urutan=i).model_dump())
-                    i += 1
-            await db.products.insert_many(objs)
-            docs = objs
-        docs.sort(key=lambda d: d.get("urutan", 0))
-        return docs
-    except Exception as e:
-        import traceback
-        return {"error": str(e), "traceback": traceback.format_exc()}
+    docs = await db.products.find({}, {"_id": 0}).to_list(2000)
+    if not docs:
+        objs = []
+        i = 0
+        for kategori, names in _PRODUCT_SEED.items():
+            for nama in names:
+                objs.append(Product(kategori=kategori, nama=nama, urutan=i).model_dump())
+                i += 1
+        await db.products.insert_many(objs)
+        docs = objs
+    docs.sort(key=lambda d: d.get("urutan", 0))
+    return docs
 
 
 @api_router.post("/products", response_model=Product)
@@ -1340,8 +1100,7 @@ app.add_middleware(UploadsCORPMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
-    allow_origin_regex=".*",
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
