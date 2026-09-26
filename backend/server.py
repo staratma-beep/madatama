@@ -19,22 +19,13 @@ load_dotenv(ROOT_DIR / '.env')
 
 client = None
 db = None
-app = FastAPI()
 
-@app.middleware("http")
-async def ensure_db_connection(request, call_next):
-    global client, db
-    if client is None:
-        try:
-            mongo_url = os.environ.get("MONGO_URL")
-            if mongo_url:
-                client = AsyncIOMotorClient(mongo_url)
-                db = client["madatama"]
-        except Exception as e:
-            import traceback
-            from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
-    return await call_next(request)
+mongo_url = os.environ.get("MONGO_URL")
+if mongo_url:
+    client = AsyncIOMotorClient(mongo_url)
+    db = client["madatama"]
+
+app = FastAPI()
 
 # Create uploads directory if not exists
 os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
