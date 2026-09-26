@@ -17,13 +17,21 @@ WIB = timezone(timedelta(hours=7))
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-client = None
-db = None
+class DBProxy:
+    def __getattr__(self, name):
+        global _motor_client, _motor_db
+        if _motor_client is None:
+            mongo_url = os.environ.get("MONGO_URL")
+            if mongo_url:
+                _motor_client = AsyncIOMotorClient(mongo_url)
+                _motor_db = _motor_client["madatama"]
+            else:
+                raise Exception("MONGO_URL is missing in .env")
+        return getattr(_motor_db, name)
 
-mongo_url = os.environ.get("MONGO_URL")
-if mongo_url:
-    client = AsyncIOMotorClient(mongo_url)
-    db = client["madatama"]
+_motor_client = None
+_motor_db = None
+db = DBProxy()
 
 app = FastAPI()
 
@@ -1343,4 +1351,5 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if _motor_client is not None:
+        _motor_client.close()
