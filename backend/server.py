@@ -17,15 +17,19 @@ WIB = timezone(timedelta(hours=7))
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ.get("MONGO_URL")
-if mongo_url:
-    client = AsyncIOMotorClient(mongo_url)
-    db = client["madatama"]
-else:
-    client = None
-    db = None
-
+client = None
+db = None
 app = FastAPI()
+
+@app.middleware("http")
+async def ensure_db_connection(request, call_next):
+    global client, db
+    if client is None:
+        mongo_url = os.environ.get("MONGO_URL")
+        if mongo_url:
+            client = AsyncIOMotorClient(mongo_url)
+            db = client["madatama"]
+    return await call_next(request)
 
 # Create uploads directory if not exists
 os.makedirs(os.path.join(ROOT_DIR, "uploads"), exist_ok=True)
