@@ -46,7 +46,12 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./backend/
         server-dir: ./backend_api/ 
-        # Sesuaikan dengan nama folder Setup Python App di cPanel
+        exclude: |
+          **/.env
+          **/passenger_wsgi.py
+          **/uploads/**
+          **/__pycache__/**
+          **/*.log
         
     # Opsional: Restart app python secara otomatis jika didukung oleh cPanel touch restart.txt
     # Anda perlu SSH action jika ingin restart otomatis secara advanced, 
