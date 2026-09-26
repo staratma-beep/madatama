@@ -720,20 +720,24 @@ async def delete_fixed_cost(fid: str):
 
 
 # ---------------- Products (Kalkulator HPP) ----------------
-@api_router.get("/products", response_model=List[Product])
+@api_router.get("/products")
 async def get_products():
-    docs = await db.products.find({}, {"_id": 0}).to_list(2000)
-    if not docs:
-        objs = []
-        i = 0
-        for kategori, names in _PRODUCT_SEED.items():
-            for nama in names:
-                objs.append(Product(kategori=kategori, nama=nama, urutan=i).model_dump())
-                i += 1
-        await db.products.insert_many(objs)
-        docs = objs
-    docs.sort(key=lambda d: d.get("urutan", 0))
-    return docs
+    try:
+        docs = await db.products.find({}, {"_id": 0}).to_list(2000)
+        if not docs:
+            objs = []
+            i = 0
+            for kategori, names in _PRODUCT_SEED.items():
+                for nama in names:
+                    objs.append(Product(kategori=kategori, nama=nama, urutan=i).model_dump())
+                    i += 1
+            await db.products.insert_many(objs)
+            docs = objs
+        docs.sort(key=lambda d: d.get("urutan", 0))
+        return docs
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 
 @api_router.post("/products", response_model=Product)
